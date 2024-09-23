@@ -1,7 +1,11 @@
 [package]
 name = "yammer"
 version = "0.1.0"
+authors = ["Robert Escriva <robert@rescrv.net>"]
 edition = "2021"
+description = "yammer provides an ollama-compatible client library."
+license = "Apache-2.0"
+repository = "https://github.com/rescrv/yammer"
 
 [dependencies]
 getopts = "0.2"

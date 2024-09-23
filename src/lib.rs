@@ -1,3 +1,5 @@
+//! yammer is a library for interacting with the ollama API.
+
 use std::io::Write;
 
 use reqwest::Client;
@@ -8,6 +10,7 @@ pub use conversation::Conversation;
 
 /////////////////////////////////////////////// Error //////////////////////////////////////////////
 
+/// An error that can occur when interacting with the ollama API.
 #[derive(Debug)]
 pub enum Error {
     Message(String),
@@ -42,11 +45,15 @@ impl From<std::io::Error> for Error {
 
 /////////////////////////////////////////// ErrorResponse //////////////////////////////////////////
 
+/// An error response from the ollama API.
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct ErrorResponse {
     pub error: String,
 }
 
+//////////////////////////////////////////// PullRequest ///////////////////////////////////////////
+
+/// A request to pull a model from the ollama API.
 #[derive(
     Clone,
     Debug,
@@ -61,42 +68,64 @@ pub struct PullRequest {}
 
 ////////////////////////////////////////// GenerateRequest /////////////////////////////////////////
 
+/// Generate a response to a prompt.
 #[derive(
     Clone, Debug, Eq, PartialEq, arrrg_derive::CommandLine, serde::Deserialize, serde::Serialize,
 )]
 pub struct GenerateRequest {
+    /// The name of the ollama model to use from the ollama library.
     #[arrrg(
         optional,
         "The name of the ollama model to use from the ollama library."
     )]
     pub model: String,
+
+    /// The prompt to provide to the model.  This is the text that the model will use to generate a
+    /// response.
     #[arrrg(
         optional,
         "The prompt to provide to the model.  This is the text that the model will use to generate a response."
     )]
     pub prompt: String,
+
+    /// The suffix to append to the prompt.  This is useful for generating a response that is a
+    /// continuation of the prompt.
     #[arrrg(
         optional,
         "The suffix to append to the prompt.  This is useful for generating a response that is a continuation of the prompt."
     )]
     pub suffix: String,
+
+    /// A list of base64-encoded images to supply to the model.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub images: Option<Vec<String>>,
+
+    /// The format to return the response in.  If provided, this must be "json".
     #[arrrg(
         optional,
         "The format to return the response in.  If provided, this must be \"json\"."
     )]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
+
+    /// The system to use for the response.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub system: Option<String>,
+
+    /// The template to use for the response.
     #[arrrg(optional, "The template to use for the response.")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub template: Option<String>,
+
+    /// Should this response stream?
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stream: Option<bool>,
+
+    /// Should this response be raw?
     #[serde(skip_serializing_if = "Option::is_none")]
     pub raw: Option<bool>,
+
+    /// How long to hold the model in memory for once the request completes.
     #[arrrg(
         optional,
         "How long to hold the model in memory for once the request completes."
@@ -124,6 +153,7 @@ impl Default for GenerateRequest {
 
 ///////////////////////////////////////// GenerateResponse /////////////////////////////////////////
 
+/// A response to a generate request.
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct GenerateResponse {
     pub model: String,
