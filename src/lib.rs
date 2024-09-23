@@ -2,6 +2,10 @@ use std::io::Write;
 
 use reqwest::Client;
 
+mod conversation;
+
+pub use conversation::Conversation;
+
 /////////////////////////////////////////////// Error //////////////////////////////////////////////
 
 #[derive(Debug)]
@@ -43,27 +47,79 @@ pub struct ErrorResponse {
     pub error: String,
 }
 
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    Eq,
+    PartialEq,
+    arrrg_derive::CommandLine,
+    serde::Deserialize,
+    serde::Serialize,
+)]
+pub struct PullRequest {}
+
 ////////////////////////////////////////// GenerateRequest /////////////////////////////////////////
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone, Debug, Eq, PartialEq, arrrg_derive::CommandLine, serde::Deserialize, serde::Serialize,
+)]
 pub struct GenerateRequest {
+    #[arrrg(
+        optional,
+        "The name of the ollama model to use from the ollama library."
+    )]
     pub model: String,
+    #[arrrg(
+        optional,
+        "The prompt to provide to the model.  This is the text that the model will use to generate a response."
+    )]
     pub prompt: String,
+    #[arrrg(
+        optional,
+        "The suffix to append to the prompt.  This is useful for generating a response that is a continuation of the prompt."
+    )]
     pub suffix: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub images: Option<Vec<String>>,
+    #[arrrg(
+        optional,
+        "The format to return the response in.  If provided, this must be \"json\"."
+    )]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub system: Option<String>,
+    #[arrrg(optional, "The template to use for the response.")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub template: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stream: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub raw: Option<bool>,
+    #[arrrg(
+        optional,
+        "How long to hold the model in memory for once the request completes."
+    )]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub keep_alive: Option<String>,
+}
+
+impl Default for GenerateRequest {
+    fn default() -> Self {
+        Self {
+            model: "mistral-nemo".to_string(),
+            prompt: "42".to_string(),
+            suffix: "".to_string(),
+            images: None,
+            format: None,
+            system: None,
+            template: None,
+            stream: None,
+            raw: None,
+            keep_alive: None,
+        }
+    }
 }
 
 ///////////////////////////////////////// GenerateResponse /////////////////////////////////////////
@@ -81,6 +137,35 @@ pub struct GenerateResponse {
     pub eval_count: Option<f64>,
     pub eval_duration: Option<f64>,
     pub context: Vec<f64>,
+}
+
+/////////////////////////////////////////// EmbedRequest ///////////////////////////////////////////
+
+#[derive(
+    Clone, Debug, Eq, PartialEq, arrrg_derive::CommandLine, serde::Deserialize, serde::Serialize,
+)]
+pub struct EmbedRequest {
+    #[arrrg(
+        optional,
+        "The name of the ollama model to use from the ollama library."
+    )]
+    pub model: String,
+    pub input: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub truncate: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub keep_alive: Option<String>,
+}
+
+impl Default for EmbedRequest {
+    fn default() -> Self {
+        Self {
+            model: "mistral-nemo".to_string(),
+            input: vec![],
+            truncate: None,
+            keep_alive: None,
+        }
+    }
 }
 
 //////////////////////////////////////////// ChatMessage ///////////////////////////////////////////
@@ -124,7 +209,7 @@ pub struct ChatResponse {
 
 #[derive(Clone, Debug, Eq, PartialEq, arrrg_derive::CommandLine)]
 pub struct RequestOptions {
-    #[arrrg(required, "The URL of an ollama server.")]
+    #[arrrg(optional, "The URL of an ollama server.")]
     pub url: String,
 }
 
@@ -147,7 +232,6 @@ pub struct Request {
 }
 
 impl Request {
-    // TODO(rescrv): convert these to strongly typed objects.
     pub fn pull(
         options: RequestOptions,
         model: impl Into<String>,
@@ -162,16 +246,11 @@ impl Request {
         })
     }
 
-    // TODO(rescrv): convert these to strongly typed objects.
     pub fn generate(
         options: RequestOptions,
-        model: impl Into<String>,
-        prompt: impl Into<String>,
+        generate: GenerateRequest,
     ) -> Result<Self, serde_json::Error> {
-        let model = model.into();
-        let prompt = prompt.into();
-        let payload =
-            serde_json::to_string(&serde_json::json!({ "model": model, "prompt": prompt }))?;
+        let payload = serde_json::to_string(&generate)?;
         Ok(Self {
             url: options.url,
             api: "generate".to_string(),
@@ -180,13 +259,12 @@ impl Request {
         })
     }
 
-    // TODO(rescrv): convert these to strongly typed objects.
     pub fn embed(
         options: RequestOptions,
-        model: impl Into<String>,
+        embed: EmbedRequest,
         inputs: Vec<impl Into<String>>,
     ) -> Result<Self, serde_json::Error> {
-        let model = model.into();
+        let model = embed.model;
         let input: Vec<String> = inputs.into_iter().map(|s| s.into()).collect();
         let payload =
             serde_json::to_string(&serde_json::json!({ "model": model, "input": input }))?;
@@ -208,7 +286,6 @@ impl Request {
         })
     }
 
-    // TODO(rescrv): convert these to strongly typed objects.
     pub fn tags(options: RequestOptions) -> Result<Self, serde_json::Error> {
         let payload = serde_json::to_string(&serde_json::json!({}))?;
         Ok(Self {
@@ -219,7 +296,6 @@ impl Request {
         })
     }
 
-    // TODO(rescrv): convert these to strongly typed objects.
     pub fn show(
         options: RequestOptions,
         model: impl Into<String>,
