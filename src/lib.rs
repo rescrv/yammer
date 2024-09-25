@@ -6,7 +6,7 @@ use reqwest::Client;
 
 mod conversation;
 
-pub use conversation::Conversation;
+pub use conversation::{Conversation, ConversationOptions};
 
 /////////////////////////////////////////////// Error //////////////////////////////////////////////
 
@@ -64,7 +64,22 @@ pub struct ErrorResponse {
     serde::Deserialize,
     serde::Serialize,
 )]
-pub struct PullRequest {}
+pub struct PullRequest {
+    /// The name of the ollama model to use from the ollama library.
+    #[arrrg(
+        optional,
+        "The name of the ollama model to use from the ollama library."
+    )]
+    pub model: String,
+}
+
+impl PullRequest {
+    pub fn new(model: impl Into<String>) -> Self {
+        Self {
+            model: model.into(),
+        }
+    }
+}
 
 ////////////////////////////////////////// GenerateRequest /////////////////////////////////////////
 
@@ -198,6 +213,36 @@ impl Default for EmbedRequest {
     }
 }
 
+//////////////////////////////////////////// ShowRequest ///////////////////////////////////////////
+
+/// A request to pull a model from the ollama API.
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    Eq,
+    PartialEq,
+    arrrg_derive::CommandLine,
+    serde::Deserialize,
+    serde::Serialize,
+)]
+pub struct ShowRequest {
+    /// The name of the ollama model to use from the ollama library.
+    #[arrrg(
+        optional,
+        "The name of the ollama model to use from the ollama library."
+    )]
+    pub model: String,
+}
+
+impl ShowRequest {
+    pub fn new(model: impl Into<String>) -> Self {
+        Self {
+            model: model.into(),
+        }
+    }
+}
+
 //////////////////////////////////////////// ChatMessage ///////////////////////////////////////////
 
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
@@ -262,12 +307,8 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn pull(
-        options: RequestOptions,
-        model: impl Into<String>,
-    ) -> Result<Self, serde_json::Error> {
-        let model = model.into();
-        let payload = serde_json::to_string(&serde_json::json!({ "name": model }))?;
+    pub fn pull(options: RequestOptions, pull: PullRequest) -> Result<Self, serde_json::Error> {
+        let payload = serde_json::to_string(&pull)?;
         Ok(Self {
             url: options.url,
             api: "pull".to_string(),
@@ -326,12 +367,8 @@ impl Request {
         })
     }
 
-    pub fn show(
-        options: RequestOptions,
-        model: impl Into<String>,
-    ) -> Result<Self, serde_json::Error> {
-        let model = model.into();
-        let payload = serde_json::to_string(&serde_json::json!({ "name": model }))?;
+    pub fn show(options: RequestOptions, show: ShowRequest) -> Result<Self, serde_json::Error> {
+        let payload = serde_json::to_string(&show)?;
         Ok(Self {
             url: options.url,
             api: "show".to_string(),
@@ -340,7 +377,11 @@ impl Request {
         })
     }
 
-    pub async fn doit(self) -> reqwest::Result<reqwest::Response> {
+    pub async fn accumulate(self, acc: &mut impl Accumulator) -> Result<(), Error> {
+        accumulate(self, acc).await
+    }
+
+    async fn doit(self) -> reqwest::Result<reqwest::Response> {
         let client = Client::new();
         // NOTE(rescrv): This is intentionally match.  I could embed the Method in the Request, but
         // that wouldn't allow me the flexibility to e.g., easily add a new variant with special
