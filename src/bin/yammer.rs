@@ -1,14 +1,8 @@
-use std::path::PathBuf;
-
 use arrrg::CommandLine;
-use rustyline::error::ReadlineError;
-use rustyline::history::FileHistory;
-use rustyline::{Config, Editor};
 
 use yammer::{
-    ChatAccumulator, ChatMessage, ChatRequest, Conversation, ConversationOptions, EmbedRequest,
-    Error, FieldWriteAccumulator, GenerateRequest, JsonAccumulator, PullRequest, Request,
-    RequestOptions, ShowRequest, VecAccumulator,
+    Conversation, ConversationOptions, EmbedRequest, FieldWriteAccumulator, GenerateRequest,
+    JsonAccumulator, PullRequest, Request, RequestOptions, ShowRequest,
 };
 
 fn usage() {
@@ -90,13 +84,16 @@ async fn main() -> Result<(), yammer::Error> {
                 .await?;
         }
         "chat" => {
-            if args.len() != 2 {
-                eprintln!("USAGE: yammer [options] chat <model>");
+            let (co, free) = ConversationOptions::from_arguments_relaxed(
+                "USAGE: yammer [options] chat [chat-options]",
+                &args[1..],
+            );
+            if !free.is_empty() {
+                eprintln!("USAGE: yammer [options] chat [chat-options]");
                 std::process::exit(1);
             }
-            let co = ConversationOptions::default();
-            let conversation = Conversation::default();
-            conversation.shell(options, co).await?;
+            let conversation = Conversation::new(co);
+            conversation.shell(options).await?;
         }
         _ => usage(),
     }
