@@ -6,7 +6,7 @@ use reqwest::Client;
 
 mod conversation;
 
-pub use conversation::{Conversation, ConversationOptions};
+pub use conversation::{Conversation, ConversationOptions, Spinner};
 
 /////////////////////////////////////////////// Error //////////////////////////////////////////////
 
@@ -414,12 +414,13 @@ impl Request {
 //////////////////////////////////////////// Accumulator ///////////////////////////////////////////
 
 pub trait Accumulator {
-    fn accumulate(&mut self, message: serde_json::Value);
+    fn accumulate(&mut self, message: serde_json::Value) -> std::ops::ControlFlow<()>;
 }
 
 impl<T: Accumulator> Accumulator for &mut T {
-    fn accumulate(&mut self, message: serde_json::Value) {
+    fn accumulate(&mut self, message: serde_json::Value) -> std::ops::ControlFlow<()> {
         (**self).accumulate(message);
+        std::ops::ControlFlow::Continue(())
     }
 }
 
@@ -429,9 +430,10 @@ macro_rules! impl_accumulator {
         impl<$($name: Accumulator),+> Accumulator for ($($name,)+)
         where ($($name,)+): std::fmt::Debug,
         {
-            fn accumulate(&mut self, message: serde_json::Value) {
+            fn accumulate(&mut self, message: serde_json::Value)  -> std::ops::ControlFlow<()>{
                 let ($($name,)+) = self;
                 $($name.accumulate(message.clone());)+
+                std::ops::ControlFlow::Continue(())
             }
         }
     };
@@ -480,11 +482,12 @@ impl<W: Write> FieldWriteAccumulator<W> {
 }
 
 impl<W: Write> Accumulator for FieldWriteAccumulator<W> {
-    fn accumulate(&mut self, message: serde_json::Value) {
+    fn accumulate(&mut self, message: serde_json::Value) -> std::ops::ControlFlow<()> {
         if let Some(serde_json::Value::String(message)) = message.get(&self.field) {
             let _ = write!(self.output, "{}", message);
             let _ = self.output.flush();
         }
+        std::ops::ControlFlow::Continue(())
     }
 }
 
@@ -511,7 +514,7 @@ impl<W: Write> JsonAccumulator<W> {
 }
 
 impl<W: Write> Accumulator for JsonAccumulator<W> {
-    fn accumulate(&mut self, message: serde_json::Value) {
+    fn accumulate(&mut self, message: serde_json::Value) -> std::ops::ControlFlow<()> {
         if self.pretty {
             let _ = writeln!(
                 self.output,
@@ -521,6 +524,7 @@ impl<W: Write> Accumulator for JsonAccumulator<W> {
         } else {
             let _ = writeln!(self.output, "{}", serde_json::to_string(&message).unwrap());
         }
+        std::ops::ControlFlow::Continue(())
     }
 }
 
@@ -536,8 +540,9 @@ impl<'a> VecAccumulator<'a> {
 }
 
 impl<'a> Accumulator for VecAccumulator<'a> {
-    fn accumulate(&mut self, message: serde_json::Value) {
+    fn accumulate(&mut self, message: serde_json::Value) -> std::ops::ControlFlow<()> {
         self.output.push(message);
+        std::ops::ControlFlow::Continue(())
     }
 }
 
@@ -547,12 +552,12 @@ pub struct ChatAccumulator {
 }
 
 impl Accumulator for ChatAccumulator {
-    fn accumulate(&mut self, msg: serde_json::Value) {
+    fn accumulate(&mut self, msg: serde_json::Value) -> std::ops::ControlFlow<()> {
         let msg = match serde_json::from_value::<ChatResponse>(msg.clone()) {
             Ok(msg) => msg,
             Err(err) => {
                 eprintln!("could not parse message {msg}: {:?}", err);
-                return;
+                return std::ops::ControlFlow::Break(());
             }
         };
         if self.seen_non_ws || !msg.message.content.trim().is_empty() {
@@ -561,6 +566,7 @@ impl Accumulator for ChatAccumulator {
             let _ = stdout.flush();
             self.seen_non_ws = true;
         }
+        std::ops::ControlFlow::Continue(())
     }
 }
 
@@ -605,4 +611,23 @@ pub async fn accumulate(req: Request, mut acc: impl Accumulator) -> Result<(), E
         acc.accumulate(message);
     }
     Ok(())
+}
+
+/////////////////////////////////////////////// load ///////////////////////////////////////////////
+
+pub fn load(path: impl AsRef<std::path::Path>) -> Result<Vec<ChatMessage>, Error> {
+    let path = path.as_ref();
+    let content = std::fs::read_to_string(path)?;
+    let mut msgs = vec![];
+    for line in content.split_terminator('\n') {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let Ok(msg) = serde_json::from_str::<ChatMessage>(line) else {
+            continue;
+        };
+        msgs.push(msg);
+    }
+    Ok(msgs)
 }

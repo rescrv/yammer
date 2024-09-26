@@ -4,7 +4,8 @@
 //! a user and an assistant. The conversation can be used to generate a `ChatRequest` to work with
 //! the core yammer library.
 
-use std::io::Write;
+use std::fs::OpenOptions;
+use std::io::{BufWriter, Write};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -20,17 +21,21 @@ use super::{ChatMessage, ChatRequest};
 #[derive(Clone, Debug, Eq, PartialEq, arrrg_derive::CommandLine)]
 pub struct ConversationOptions {
     #[arrrg(required, "Model to run.")]
-    model: String,
+    pub model: String,
     #[arrrg(optional, "System prompt to load in advance.")]
-    system: Option<String>,
+    pub system: Option<String>,
+    #[arrrg(optional, "File to write the ndjson logs to.")]
+    pub log: Option<String>,
     #[arrrg(optional, "HISTFILE for the shell.")]
-    histfile: Option<String>,
+    pub histfile: Option<String>,
     #[arrrg(flag, "Ignore duplicate history entries.")]
-    history_ignore_dups: bool,
+    pub history_ignore_dups: bool,
     #[arrrg(flag, "Ignore history entries starting with space.")]
-    history_ignore_space: bool,
+    pub history_ignore_space: bool,
     #[arrrg(optional, "PS1 for the conversation shell")]
-    ps1: String,
+    pub ps1: String,
+    #[arrrg(optional, "Load chat history from a file previously created by log")]
+    pub load: Option<String>,
 }
 
 impl Default for ConversationOptions {
@@ -38,10 +43,12 @@ impl Default for ConversationOptions {
         Self {
             model: "mistral-nemo".to_string(),
             system: None,
+            log: None,
             histfile: None,
             history_ignore_dups: false,
             history_ignore_space: false,
             ps1: "yammer> ".to_string(),
+            load: None,
         }
     }
 }
@@ -49,17 +56,15 @@ impl Default for ConversationOptions {
 /////////////////////////////////////////// Conversation ///////////////////////////////////////////
 
 /// Conversation captures an exchange of messages between a user and an assistant.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Conversation {
-    options: ConversationOptions,
     messages: Vec<ChatMessage>,
 }
 
 impl Conversation {
     /// Create a new conversation.
-    pub fn new(options: ConversationOptions) -> Self {
+    pub fn new() -> Self {
         Self {
-            options,
             messages: Vec::new(),
         }
     }
@@ -84,8 +89,12 @@ impl Conversation {
         let content = pieces
             .into_iter()
             .flat_map(|x| {
-                if let Some(serde_json::Value::String(x)) = x.get("response") {
-                    Some(x.clone())
+                if let Some(serde_json::Value::Object(x)) = x.get("message") {
+                    if let Some(serde_json::Value::String(x)) = x.get("content") {
+                        Some(x.clone())
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
@@ -122,17 +131,20 @@ impl Conversation {
         }
     }
 
-    pub async fn shell(mut self, global: super::RequestOptions) -> Result<(), super::Error> {
+    pub async fn shell(
+        mut self,
+        global: super::RequestOptions,
+        options: ConversationOptions,
+    ) -> Result<(), super::Error> {
         let config = Config::builder()
             .auto_add_history(true)
             .max_history_size(1_000_000)
             .expect("this should always work")
-            .history_ignore_dups(self.options.history_ignore_dups)
+            .history_ignore_dups(options.history_ignore_dups)
             .expect("this should always work")
-            .history_ignore_space(self.options.history_ignore_space)
+            .history_ignore_space(options.history_ignore_space)
             .build();
-        let mut rl: Editor<(), FileHistory> = if let Some(histfile) = self.options.histfile.as_ref()
-        {
+        let mut rl: Editor<(), FileHistory> = if let Some(histfile) = options.histfile.as_ref() {
             let histfile = PathBuf::from(histfile);
             let history = rustyline::history::FileHistory::new();
             let mut rl = Editor::with_history(config, history).expect("this should always work");
@@ -144,17 +156,52 @@ impl Conversation {
             Editor::with_config(config).expect("this should always work")
         };
         let mut spinner = Spinner::new();
+        let mut log = if let Some(log_path) = options.log.as_ref() {
+            let log = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(log_path)?;
+            let mut log = BufWriter::new(log);
+            writeln!(
+                log,
+                "{}",
+                serde_json::to_string(&std::env::args().collect::<Vec<_>>())?
+            )?;
+            let _ = log.flush();
+            Some(BufWriter::new(log))
+        } else {
+            None
+        };
+        if let Some(load) = options.load.as_ref() {
+            for msg in super::load(load)? {
+                self.push(msg);
+            }
+        }
         loop {
-            let line = rl.readline(&self.options.ps1);
+            let line = rl.readline(&options.ps1);
             match line {
                 Ok(line) => {
+                    if line.trim().starts_with("/") {
+                        if self.command(line).is_break() {
+                            return Ok(());
+                        }
+                        continue;
+                    }
                     self.push(ChatMessage {
                         role: "user".to_string(),
                         content: line,
                         images: None,
                         tool_calls: None,
                     });
-                    let cr = self.clone().request(&self.options.model);
+                    if let Some(log) = log.as_mut() {
+                        writeln!(
+                            log,
+                            "{}",
+                            serde_json::to_string(&self.messages[self.messages.len() - 1])?
+                        )?;
+                        let _ = log.flush();
+                    }
+                    let cr = self.clone().request(&options.model);
                     let req = match super::Request::chat(global.clone(), cr) {
                         Ok(req) => req,
                         Err(err) => {
@@ -163,16 +210,26 @@ impl Conversation {
                         }
                     };
                     let mut printer = super::ChatAccumulator::default();
+                    let mut acc = self.accumulator();
                     spinner.start();
-                    if let Err(err) = super::accumulate(
-                        req,
-                        &mut (&mut spinner, self.accumulator(), &mut printer),
-                    )
-                    .await
-                    {
+                    let resp =
+                        super::accumulate(req, &mut (&mut spinner, &mut acc, &mut printer)).await;
+                    spinner.inhibit();
+                    if let Err(err) = resp {
                         eprintln!("could not chat: {:?}", err);
+                    } else {
+                        println!();
                     }
-                    println!();
+                    drop(acc);
+                    // FENCE: drop acc above here; log below here.
+                    if let Some(log) = log.as_mut() {
+                        writeln!(
+                            log,
+                            "{}",
+                            serde_json::to_string(&self.messages[self.messages.len() - 1])?
+                        )?;
+                        let _ = log.flush();
+                    }
                 }
                 Err(ReadlineError::Interrupted) => {}
                 Err(ReadlineError::Eof) => {
@@ -181,6 +238,16 @@ impl Conversation {
                 Err(err) => {
                     eprintln!("could not read line: {}", err);
                 }
+            }
+        }
+    }
+
+    fn command(&mut self, line: String) -> std::ops::ControlFlow<()> {
+        match line.as_str() {
+            "/exit" => std::ops::ControlFlow::Break(()),
+            _ => {
+                eprintln!("unknown command: {}", line);
+                std::ops::ControlFlow::Continue(())
             }
         }
     }
@@ -193,8 +260,9 @@ pub struct ConversationAccumulator<'a> {
 }
 
 impl<'a> super::Accumulator for ConversationAccumulator<'a> {
-    fn accumulate(&mut self, message: serde_json::Value) {
+    fn accumulate(&mut self, message: serde_json::Value) -> std::ops::ControlFlow<()> {
         self.pieces.push(message);
+        std::ops::ControlFlow::Continue(())
     }
 }
 
@@ -217,13 +285,8 @@ pub struct Spinner {
 }
 
 impl Spinner {
-    fn start(&self) {
-        *self.inhibited.lock().unwrap() = false;
-    }
-}
-
-impl Spinner {
-    fn new() -> Self {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
         let done = Arc::new(AtomicBool::new(false));
         let done_p = Arc::clone(&done);
         let inhibited = Arc::new(Mutex::new(true));
@@ -252,7 +315,11 @@ impl Spinner {
         }
     }
 
-    fn inhibit(&self) {
+    pub fn start(&self) {
+        *self.inhibited.lock().unwrap() = false;
+    }
+
+    pub fn inhibit(&self) {
         let mut inhibited = self.inhibited.lock().unwrap();
         if !*inhibited {
             *inhibited = true;
@@ -264,14 +331,16 @@ impl Spinner {
 }
 
 impl super::Accumulator for Spinner {
-    fn accumulate(&mut self, _: serde_json::Value) {
+    fn accumulate(&mut self, _: serde_json::Value) -> std::ops::ControlFlow<()> {
         self.inhibit();
+        std::ops::ControlFlow::Continue(())
     }
 }
 
 impl Drop for Spinner {
     fn drop(&mut self) {
         self.done.store(true, Ordering::Relaxed);
+        self.inhibit();
         if let Some(background) = self.background.take() {
             background.join().unwrap();
         }

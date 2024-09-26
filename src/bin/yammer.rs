@@ -12,6 +12,7 @@ fn usage() {
 
 #[tokio::main]
 async fn main() -> Result<(), yammer::Error> {
+    minimal_signals::block();
     let (options, args) =
         RequestOptions::from_command_line_relaxed("USAGE: yammer [options] <command> [args]");
     if args.is_empty() {
@@ -92,8 +93,8 @@ async fn main() -> Result<(), yammer::Error> {
                 eprintln!("USAGE: yammer [options] chat [chat-options]");
                 std::process::exit(1);
             }
-            let conversation = Conversation::new(co);
-            conversation.shell(options).await?;
+            let conversation = Conversation::new();
+            conversation.shell(options, co).await?;
         }
         _ => usage(),
     }
