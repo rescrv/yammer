@@ -81,6 +81,43 @@ impl PullRequest {
     }
 }
 
+/////////////////////////////////////////// CreateRequest //////////////////////////////////////////
+
+/// A request to pull a model from the ollama API.
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    Eq,
+    PartialEq,
+    arrrg_derive::CommandLine,
+    serde::Deserialize,
+    serde::Serialize,
+)]
+pub struct CreateRequest {
+    /// The name of the model to create.
+    #[arrrg(required, "The name of the model to create.")]
+    pub name: String,
+
+    /// The name of the model to create.
+    #[arrrg(required, "The contents of the modelfile.")]
+    pub modelfile: String,
+
+    /// Whether to stream the results.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stream: Option<bool>,
+}
+
+impl CreateRequest {
+    pub fn new(name: impl Into<String>, modelfile: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            modelfile: modelfile.into(),
+            stream: None,
+        }
+    }
+}
+
 ////////////////////////////////////////// GenerateRequest /////////////////////////////////////////
 
 /// Generate a response to a prompt.
@@ -317,6 +354,19 @@ impl Request {
         })
     }
 
+    pub fn create(
+        options: RequestOptions,
+        create: CreateRequest,
+    ) -> Result<Self, serde_json::Error> {
+        let payload = serde_json::to_string(&create)?;
+        Ok(Self {
+            url: options.url,
+            api: "create".to_string(),
+            payload,
+            streaming: true,
+        })
+    }
+
     pub fn generate(
         options: RequestOptions,
         generate: GenerateRequest,
@@ -387,7 +437,7 @@ impl Request {
         // that wouldn't allow me the flexibility to e.g., easily add a new variant with special
         // headers down the line.  This allows me to add methods to where I need them.
         match self.api.as_str() {
-            "pull" | "generate" | "embed" | "chat" | "show" => {
+            "pull" | "create" | "generate" | "embed" | "chat" | "show" => {
                 client
                     .post(&format!("{}/api/{}", self.url, self.api))
                     .header(reqwest::header::ACCEPT, "application/json")

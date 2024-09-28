@@ -1,8 +1,8 @@
 use arrrg::CommandLine;
 
 use yammer::{
-    Conversation, ConversationOptions, EmbedRequest, FieldWriteAccumulator, GenerateRequest,
-    JsonAccumulator, PullRequest, Request, RequestOptions, ShowRequest,
+    Conversation, ConversationOptions, CreateRequest, EmbedRequest, FieldWriteAccumulator,
+    GenerateRequest, JsonAccumulator, PullRequest, Request, RequestOptions, ShowRequest,
 };
 
 fn usage() {
@@ -30,6 +30,19 @@ async fn main() -> Result<(), yammer::Error> {
                     .accumulate(&mut JsonAccumulator::new(std::io::stdout()))
                     .await?;
             }
+        }
+        "create" => {
+            let (c, free) = CreateRequest::from_arguments_relaxed(
+                "USAGE: yammer [options] create [create-options]",
+                &args[1..],
+            );
+            if !free.is_empty() {
+                eprintln!("command takes no positional arguments");
+                std::process::exit(1);
+            }
+            Request::create(options.clone(), c)?
+                .accumulate(&mut JsonAccumulator::new(std::io::stdout()))
+                .await?;
         }
         "generate" => {
             let (g, free) = GenerateRequest::from_arguments_relaxed(
@@ -95,6 +108,24 @@ async fn main() -> Result<(), yammer::Error> {
             }
             let conversation = Conversation::new();
             conversation.shell(options, co).await?;
+        }
+        "replay" => {
+            let (co, free) = ConversationOptions::from_arguments_relaxed(
+                "USAGE: yammer [options] chat [chat-options]",
+                &args[1..],
+            );
+            for arg in &free {
+                let mut conversation = Conversation::new();
+                let msgs = yammer::load(arg)?;
+                println!("loaded {} messages from {} for replay", msgs.len(), arg);
+                for msg in msgs {
+                    if msg.role == "user" {
+                        conversation.push(msg);
+                    }
+                }
+                println!("replaying conversation from {}: {conversation:?}", arg);
+                conversation.replay(options.clone(), co.clone()).await?;
+            }
         }
         _ => usage(),
     }
