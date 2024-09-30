@@ -106,6 +106,11 @@ pub struct CreateRequest {
     /// Whether to stream the results.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stream: Option<bool>,
+
+    /// Whether to stream the results.
+    #[arrrg(optional, "An optional quantize specification.")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub quantize: Option<String>,
 }
 
 impl CreateRequest {
@@ -114,6 +119,7 @@ impl CreateRequest {
             name: name.into(),
             modelfile: modelfile.into(),
             stream: None,
+            quantize: None,
         }
     }
 }
