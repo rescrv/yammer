@@ -122,29 +122,6 @@ async fn main() -> Result<(), yammer::Error> {
             let conversation = Conversation::new();
             conversation.shell(options, co).await?;
         }
-        "replay" => {
-            let (co, free) = ConversationOptions::from_arguments_relaxed(
-                "USAGE: yammer [options] chat [chat-options]",
-                &args[1..],
-            );
-            for arg in &free {
-                let mut co = co.clone();
-                let log = co.log.take();
-                co.log = file_for(&co, YAMMER_LOG, log);
-                let histfile = co.histfile.take();
-                co.histfile = file_for(&co, YAMMER_HISTFILE, histfile);
-                let mut conversation = Conversation::new();
-                let msgs = yammer::load(arg)?;
-                println!("loaded {} messages from {} for replay", msgs.len(), arg);
-                for msg in msgs {
-                    if msg.role == "user" {
-                        conversation.push(msg);
-                    }
-                }
-                println!("replaying conversation from {}: {conversation:?}", arg);
-                conversation.replay(options.clone(), co.clone()).await?;
-            }
-        }
         _ => usage(),
     }
     Ok(())
