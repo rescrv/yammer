@@ -28,10 +28,6 @@ pub struct ConversationOptions {
     pub log: Option<String>,
     #[arrrg(optional, "HISTFILE for the shell.")]
     pub histfile: Option<String>,
-    #[arrrg(flag, "Ignore duplicate history entries.")]
-    pub history_ignore_dups: bool,
-    #[arrrg(flag, "Ignore history entries starting with space.")]
-    pub history_ignore_space: bool,
     #[arrrg(optional, "PS1 for the conversation shell")]
     pub ps1: String,
     #[arrrg(optional, "Load chat history from a file previously created by log")]
@@ -45,8 +41,6 @@ impl Default for ConversationOptions {
             system: None,
             log: None,
             histfile: None,
-            history_ignore_dups: false,
-            history_ignore_space: false,
             ps1: "yammer> ".to_string(),
             load: None,
         }
@@ -140,9 +134,9 @@ impl Conversation {
             .auto_add_history(true)
             .max_history_size(1_000_000)
             .expect("this should always work")
-            .history_ignore_dups(options.history_ignore_dups)
+            .history_ignore_dups(true)
             .expect("this should always work")
-            .history_ignore_space(options.history_ignore_space)
+            .history_ignore_space(true)
             .build();
         let mut rl: Editor<(), FileHistory> = if let Some(histfile) = options.histfile.as_ref() {
             let histfile = PathBuf::from(histfile);
@@ -186,6 +180,9 @@ impl Conversation {
                             return Ok(());
                         }
                         continue;
+                    }
+                    if let Some(histfile) = options.histfile.as_ref() {
+                        rl.save_history(&histfile).expect("this should always work");
                     }
                     self.push(ChatMessage {
                         role: "user".to_string(),

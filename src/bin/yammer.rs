@@ -1,9 +1,15 @@
+use std::time::{Duration, SystemTime};
+
 use arrrg::CommandLine;
 
 use yammer::{
     Conversation, ConversationOptions, CreateRequest, EmbedRequest, FieldWriteAccumulator,
     GenerateRequest, JsonAccumulator, PullRequest, Request, RequestOptions, ShowRequest,
 };
+
+// Environment variables
+const YAMMER_LOG: &str = "YAMMER_LOG";
+const YAMMER_HISTFILE: &str = "YAMMER_HISTFILE";
 
 fn usage() {
     eprintln!("USAGE: yammer [options] <command> [args]");
@@ -20,6 +26,9 @@ async fn main() -> Result<(), yammer::Error> {
     }
     let args = args.iter().map(|s| s.as_str()).collect::<Vec<_>>();
     match args[0] {
+        "debug" => {
+            println!("{options:?}\nargs: {args:?}\nOLLAMA_HOST={}", options.url());
+        }
         "pull" => {
             let (_, free) = PullRequest::from_arguments_relaxed(
                 "USAGE: yammer [options] pull [model ...]",
@@ -98,7 +107,7 @@ async fn main() -> Result<(), yammer::Error> {
                 .await?;
         }
         "chat" => {
-            let (co, free) = ConversationOptions::from_arguments_relaxed(
+            let (mut co, free) = ConversationOptions::from_arguments_relaxed(
                 "USAGE: yammer [options] chat [chat-options]",
                 &args[1..],
             );
@@ -106,6 +115,10 @@ async fn main() -> Result<(), yammer::Error> {
                 eprintln!("USAGE: yammer [options] chat [chat-options]");
                 std::process::exit(1);
             }
+            let log = co.log.take();
+            co.log = file_for(&co, YAMMER_LOG, log);
+            let histfile = co.histfile.take();
+            co.histfile = file_for(&co, YAMMER_HISTFILE, histfile);
             let conversation = Conversation::new();
             conversation.shell(options, co).await?;
         }
@@ -115,6 +128,11 @@ async fn main() -> Result<(), yammer::Error> {
                 &args[1..],
             );
             for arg in &free {
+                let mut co = co.clone();
+                let log = co.log.take();
+                co.log = file_for(&co, YAMMER_LOG, log);
+                let histfile = co.histfile.take();
+                co.histfile = file_for(&co, YAMMER_HISTFILE, histfile);
                 let mut conversation = Conversation::new();
                 let msgs = yammer::load(arg)?;
                 println!("loaded {} messages from {} for replay", msgs.len(), arg);
@@ -130,4 +148,40 @@ async fn main() -> Result<(), yammer::Error> {
         _ => usage(),
     }
     Ok(())
+}
+
+fn file_for(co: &ConversationOptions, env_var: &str, log: Option<String>) -> Option<String> {
+    let mut expanded = String::new();
+    let mut prev = ' ';
+    for c in log.or_else(|| std::env::var(env_var).ok())?.chars() {
+        if prev == '%' {
+            if c == 's' {
+                expanded += &format!(
+                    "{}",
+                    SystemTime::now()
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap_or(Duration::ZERO)
+                        .as_secs()
+                );
+            } else if c == 'm' {
+                expanded += co.model.as_str();
+            } else if c == '%' {
+                expanded.push('%');
+            } else {
+                expanded.push('%');
+                expanded.push(c);
+            }
+            prev = ' ';
+        } else {
+            prev = c;
+            if c != '%' {
+                expanded.push(c);
+            }
+        }
+    }
+    if !expanded.is_empty() {
+        Some(expanded)
+    } else {
+        None
+    }
 }

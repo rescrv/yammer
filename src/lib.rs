@@ -325,17 +325,18 @@ pub struct ChatResponse {
 
 ////////////////////////////////////////// RequestOptions //////////////////////////////////////////
 
-#[derive(Clone, Debug, Eq, PartialEq, arrrg_derive::CommandLine)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, arrrg_derive::CommandLine)]
 pub struct RequestOptions {
     #[arrrg(optional, "The URL of an ollama server.")]
-    pub url: String,
+    pub url: Option<String>,
 }
 
-impl Default for RequestOptions {
-    fn default() -> Self {
-        Self {
-            url: "http://localhost:11434".to_string(),
-        }
+impl RequestOptions {
+    pub fn url(&self) -> String {
+        self.url
+            .clone()
+            .or_else(|| std::env::var("OLLAMA_HOST").ok())
+            .unwrap_or_else(|| "http://localhost:11434".to_string())
     }
 }
 
@@ -353,7 +354,7 @@ impl Request {
     pub fn pull(options: RequestOptions, pull: PullRequest) -> Result<Self, serde_json::Error> {
         let payload = serde_json::to_string(&pull)?;
         Ok(Self {
-            url: options.url,
+            url: options.url(),
             api: "pull".to_string(),
             payload,
             streaming: true,
@@ -366,7 +367,7 @@ impl Request {
     ) -> Result<Self, serde_json::Error> {
         let payload = serde_json::to_string(&create)?;
         Ok(Self {
-            url: options.url,
+            url: options.url(),
             api: "create".to_string(),
             payload,
             streaming: true,
@@ -379,7 +380,7 @@ impl Request {
     ) -> Result<Self, serde_json::Error> {
         let payload = serde_json::to_string(&generate)?;
         Ok(Self {
-            url: options.url,
+            url: options.url(),
             api: "generate".to_string(),
             payload,
             streaming: true,
@@ -396,7 +397,7 @@ impl Request {
         let payload =
             serde_json::to_string(&serde_json::json!({ "model": model, "input": input }))?;
         Ok(Self {
-            url: options.url,
+            url: options.url(),
             api: "embed".to_string(),
             payload,
             streaming: false,
@@ -406,7 +407,7 @@ impl Request {
     pub fn chat(options: RequestOptions, chat: ChatRequest) -> Result<Self, serde_json::Error> {
         let payload = serde_json::to_string(&chat)?;
         Ok(Self {
-            url: options.url,
+            url: options.url(),
             api: "chat".to_string(),
             payload,
             streaming: true,
@@ -416,7 +417,7 @@ impl Request {
     pub fn tags(options: RequestOptions) -> Result<Self, serde_json::Error> {
         let payload = serde_json::to_string(&serde_json::json!({}))?;
         Ok(Self {
-            url: options.url,
+            url: options.url(),
             api: "tags".to_string(),
             payload,
             streaming: false,
@@ -426,7 +427,7 @@ impl Request {
     pub fn show(options: RequestOptions, show: ShowRequest) -> Result<Self, serde_json::Error> {
         let payload = serde_json::to_string(&show)?;
         Ok(Self {
-            url: options.url,
+            url: options.url(),
             api: "show".to_string(),
             payload,
             streaming: false,
