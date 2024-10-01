@@ -5,8 +5,8 @@ use std::time::{Duration, SystemTime};
 use arrrg::CommandLine;
 
 use yammer::{
-    Conversation, ConversationOptions, CreateRequest, EmbedRequest, FieldWriteAccumulator,
-    GenerateRequest, JsonAccumulator, PullRequest, Request, RequestOptions, ShowRequest,
+    Conversation, ConversationOptions, CreateRequest, FieldWriteAccumulator, GenerateRequest,
+    JsonAccumulator, PullRequest, Request, RequestOptions, ShowRequest,
 };
 
 /////////////////////////////////////// Environment Variables //////////////////////////////////////
@@ -60,9 +60,17 @@ within makefiles or scripts.
 
 /////////////////////////////////////////////// main ///////////////////////////////////////////////
 
-#[tokio::main]
-async fn main() -> Result<(), yammer::Error> {
+fn main() -> Result<(), yammer::Error> {
     minimal_signals::block();
+    minimal_signals::install();
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(async_main())
+}
+
+async fn async_main() -> Result<(), yammer::Error> {
     let (options, args) =
         RequestOptions::from_command_line_relaxed("USAGE: yammer [options] <command> [args]");
     if args.is_empty() {
@@ -155,7 +163,7 @@ async fn main() -> Result<(), yammer::Error> {
     Ok(())
 }
 
-fn file_for(co: &ConversationOptions, env_var: &str, log: Option<String>) -> Option<String> {
+pub fn file_for(co: &ConversationOptions, env_var: &str, log: Option<String>) -> Option<String> {
     let mut expanded = String::new();
     let mut prev = ' ';
     for c in log.or_else(|| std::env::var(env_var).ok())?.chars() {

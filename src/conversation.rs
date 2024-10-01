@@ -206,11 +206,15 @@ impl Conversation {
                             continue;
                         }
                     };
+                    let mut signal = SignalChecker;
                     let mut printer = super::ChatAccumulator::default();
                     let mut acc = self.accumulator();
                     spinner.start();
-                    let resp =
-                        super::accumulate(req, &mut (&mut spinner, &mut acc, &mut printer)).await;
+                    let resp = super::accumulate(
+                        req,
+                        &mut (&mut signal, &mut spinner, &mut acc, &mut printer),
+                    )
+                    .await;
                     spinner.inhibit();
                     if let Err(err) = resp {
                         eprintln!("could not chat: {:?}", err);
@@ -267,6 +271,22 @@ impl<'a> Drop for ConversationAccumulator<'a> {
     fn drop(&mut self) {
         self.convo
             .add_assistant_response(std::mem::take(&mut self.pieces));
+    }
+}
+
+/////////////////////////////////////////// SignalChecker //////////////////////////////////////////
+
+#[derive(Debug)]
+pub struct SignalChecker;
+
+impl super::Accumulator for SignalChecker {
+    fn accumulate(&mut self, _: serde_json::Value) -> std::ops::ControlFlow<()> {
+        if minimal_signals::pending().iter().count() > 0 {
+            minimal_signals::wait(minimal_signals::SignalSet::new().fill());
+            std::ops::ControlFlow::Break(())
+        } else {
+            std::ops::ControlFlow::Continue(())
+        }
     }
 }
 

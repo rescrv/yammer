@@ -470,14 +470,13 @@ impl Request {
 
 //////////////////////////////////////////// Accumulator ///////////////////////////////////////////
 
-pub trait Accumulator {
+pub trait Accumulator: std::fmt::Debug {
     fn accumulate(&mut self, message: serde_json::Value) -> std::ops::ControlFlow<()>;
 }
 
 impl<T: Accumulator> Accumulator for &mut T {
     fn accumulate(&mut self, message: serde_json::Value) -> std::ops::ControlFlow<()> {
-        (**self).accumulate(message);
-        std::ops::ControlFlow::Continue(())
+        (**self).accumulate(message)
     }
 }
 
@@ -489,7 +488,7 @@ macro_rules! impl_accumulator {
         {
             fn accumulate(&mut self, message: serde_json::Value)  -> std::ops::ControlFlow<()>{
                 let ($($name,)+) = self;
-                $($name.accumulate(message.clone());)+
+                $($name.accumulate(message.clone())?;)+
                 std::ops::ControlFlow::Continue(())
             }
         }
@@ -524,12 +523,12 @@ impl_accumulator! { A B C D E F G H I J K L M N O P Q R S T U V W X Y }
 impl_accumulator! { A B C D E F G H I J K L M N O P Q R S T U V W X Y Z }
 
 #[derive(Debug)]
-pub struct FieldWriteAccumulator<W: Write> {
+pub struct FieldWriteAccumulator<W: Write + std::fmt::Debug> {
     output: W,
     field: String,
 }
 
-impl<W: Write> FieldWriteAccumulator<W> {
+impl<W: Write + std::fmt::Debug> FieldWriteAccumulator<W> {
     pub fn new(output: W, field: impl Into<String>) -> Self {
         Self {
             output,
@@ -538,7 +537,7 @@ impl<W: Write> FieldWriteAccumulator<W> {
     }
 }
 
-impl<W: Write> Accumulator for FieldWriteAccumulator<W> {
+impl<W: Write + std::fmt::Debug> Accumulator for FieldWriteAccumulator<W> {
     fn accumulate(&mut self, message: serde_json::Value) -> std::ops::ControlFlow<()> {
         if let Some(serde_json::Value::String(message)) = message.get(&self.field) {
             let _ = write!(self.output, "{}", message);
@@ -549,12 +548,12 @@ impl<W: Write> Accumulator for FieldWriteAccumulator<W> {
 }
 
 #[derive(Debug)]
-pub struct JsonAccumulator<W: Write> {
+pub struct JsonAccumulator<W: Write + std::fmt::Debug> {
     output: W,
     pub pretty: bool,
 }
 
-impl<W: Write> JsonAccumulator<W> {
+impl<W: Write + std::fmt::Debug> JsonAccumulator<W> {
     pub fn new(output: W) -> Self {
         Self {
             output,
@@ -570,7 +569,7 @@ impl<W: Write> JsonAccumulator<W> {
     }
 }
 
-impl<W: Write> Accumulator for JsonAccumulator<W> {
+impl<W: Write + std::fmt::Debug> Accumulator for JsonAccumulator<W> {
     fn accumulate(&mut self, message: serde_json::Value) -> std::ops::ControlFlow<()> {
         if self.pretty {
             let _ = writeln!(
@@ -652,7 +651,9 @@ pub async fn accumulate(req: Request, mut acc: impl Accumulator) -> Result<(), E
                 else {
                     continue;
                 };
-                acc.accumulate(message);
+                if acc.accumulate(message).is_break() {
+                    break;
+                }
                 leftovers.clear();
             }
         }
