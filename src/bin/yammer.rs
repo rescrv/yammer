@@ -1,3 +1,5 @@
+//! Yammer is a command line interface to the ollama API.
+
 use std::time::{Duration, SystemTime};
 
 use arrrg::CommandLine;
@@ -7,14 +9,56 @@ use yammer::{
     GenerateRequest, JsonAccumulator, PullRequest, Request, RequestOptions, ShowRequest,
 };
 
-// Environment variables
+/////////////////////////////////////// Environment Variables //////////////////////////////////////
+
 const YAMMER_LOG: &str = "YAMMER_LOG";
 const YAMMER_HISTFILE: &str = "YAMMER_HISTFILE";
 
+/////////////////////////////////////////////// usage //////////////////////////////////////////////
+
 fn usage() {
-    eprintln!("USAGE: yammer [options] <command> [args]");
+    eprintln!(
+        r#"USAGE: yammer [options] <command>
+
+Commands:
+yammer [global-options] debug
+yammer [global-options] pull --model <model>
+yammer [global-options] create --name <model> --modelfile <contents>
+yammer [global-options] models
+yammer [global-options] show <model>
+yammer [global-options] chat --model <model> --system <system> --log <log> --histfile <histfile>
+
+Global Options:
+--url <url>          The URL of the OLLAMA server
+
+Environment Variables:
+YAMMER_LOG           The log file name.  The following format specifiers are recognized:
+
+                     %s - the current time in seconds since the epoch
+                     %m - the model name
+                     %% - a literal '%'
+
+                     Overrides --log for chat command.
+
+YAMMER_HISFILE       The history file name.  The following format specifiers are recognized:
+
+                     %s - the current time in seconds since the epoch
+                     %m - the model name
+                     %% - a literal '%
+
+                     Overrides --histfile for chat command.
+
+OLLAMA_HOST          The URL of the OLLAMA server
+
+NOTE:  The chat command is meant to be the only interactive mode of working, so it is the only
+command that logs or saves history.  I envision `yammer generate` to be used programmatically
+within makefiles or scripts.
+"#
+    );
     std::process::exit(1);
 }
+
+/////////////////////////////////////////////// main ///////////////////////////////////////////////
 
 #[tokio::main]
 async fn main() -> Result<(), yammer::Error> {
@@ -30,19 +74,21 @@ async fn main() -> Result<(), yammer::Error> {
             println!("{options:?}\nargs: {args:?}\nOLLAMA_HOST={}", options.url());
         }
         "pull" => {
-            let (_, free) = PullRequest::from_arguments_relaxed(
-                "USAGE: yammer [options] pull [model ...]",
+            let (p, free) = PullRequest::from_arguments_relaxed(
+                "USAGE: yammer [options] pull --model <model>",
                 &args[1..],
             );
-            for arg in &free {
-                Request::pull(options.clone(), PullRequest::new(arg))?
-                    .accumulate(&mut JsonAccumulator::new(std::io::stdout()))
-                    .await?;
+            if !free.is_empty() {
+                eprintln!("command takes no positional arguments");
+                std::process::exit(1);
             }
+            Request::pull(options.clone(), PullRequest::new(p.model))?
+                .accumulate(&mut JsonAccumulator::new(std::io::stdout()))
+                .await?;
         }
         "create" => {
             let (c, free) = CreateRequest::from_arguments_relaxed(
-                "USAGE: yammer [options] create [create-options]",
+                "USAGE: yammer [options] create --name <model> --modelfile <contents>",
                 &args[1..],
             );
             if !free.is_empty() {
@@ -53,44 +99,9 @@ async fn main() -> Result<(), yammer::Error> {
                 .accumulate(&mut JsonAccumulator::new(std::io::stdout()))
                 .await?;
         }
-        "generate" => {
-            let (g, free) = GenerateRequest::from_arguments_relaxed(
-                "USAGE: yammer [options] generate [generate-options]",
-                &args[1..],
-            );
-            if !free.is_empty() {
-                eprintln!("command takes no positional arguments");
-                std::process::exit(1);
-            }
-            Request::generate(options, g)?
-                .accumulate(&mut FieldWriteAccumulator::new(
-                    std::io::stdout(),
-                    "response",
-                ))
-                .await?;
-            println!();
-        }
-        "embed" => {
-            let (e, free) = EmbedRequest::from_arguments_relaxed(
-                "USAGE: yammer [options] generate [embed-options]",
-                &args[1..],
-            );
-            if free.len() != 1 {
-                eprintln!("USAGE: yammer [options] embed [embed-options] <file>");
-                std::process::exit(1);
-            }
-            let inputs = free
-                .iter()
-                .map(std::fs::read_to_string)
-                .collect::<Result<Vec<_>, _>>()?;
-            Request::embed(options, e, inputs)?
-                .accumulate(&mut JsonAccumulator::pretty(std::io::stdout()))
-                .await?;
-            println!();
-        }
         "models" => {
             if args.len() != 1 {
-                eprintln!("USAGE: yammer [options] tags");
+                eprintln!("USAGE: yammer [options] models");
                 std::process::exit(1);
             }
             Request::tags(options)?
@@ -106,13 +117,30 @@ async fn main() -> Result<(), yammer::Error> {
                 .accumulate(&mut JsonAccumulator::pretty(std::io::stdout()))
                 .await?;
         }
-        "chat" => {
-            let (mut co, free) = ConversationOptions::from_arguments_relaxed(
-                "USAGE: yammer [options] chat [chat-options]",
+        "generate" => {
+            let (g, free) = GenerateRequest::from_arguments_relaxed(
+                "USAGE: yammer [options] generate --model <model> --prompt <prompt>",
                 &args[1..],
             );
             if !free.is_empty() {
-                eprintln!("USAGE: yammer [options] chat [chat-options]");
+                eprintln!("command takes no positional arguments");
+                std::process::exit(1);
+            }
+            Request::generate(options, g)?
+                .accumulate(&mut FieldWriteAccumulator::new(
+                    std::io::stdout(),
+                    "response",
+                ))
+                .await?;
+            println!();
+        }
+        "chat" => {
+            let (mut co, free) = ConversationOptions::from_arguments_relaxed(
+                "USAGE: yammer [options] chat --model <model> --system <system>",
+                &args[1..],
+            );
+            if !free.is_empty() {
+                eprintln!("command takes no positional arguments");
                 std::process::exit(1);
             }
             let log = co.log.take();
