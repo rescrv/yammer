@@ -6,7 +6,7 @@ use arrrg::CommandLine;
 
 use yammer::{
     Conversation, ConversationOptions, CreateRequest, FieldWriteAccumulator, GenerateRequest,
-    JsonAccumulator, PullRequest, Request, RequestOptions, ShowRequest,
+    JsonAccumulator, PullRequest, Request, RequestOptions, ShowRequest, SignalChecker,
 };
 
 /////////////////////////////////////// Environment Variables //////////////////////////////////////
@@ -77,6 +77,7 @@ async fn async_main() -> Result<(), yammer::Error> {
         usage();
     }
     let args = args.iter().map(|s| s.as_str()).collect::<Vec<_>>();
+    let mut signal = SignalChecker;
     match args[0] {
         "debug" => {
             println!("{options:?}\nargs: {args:?}\nOLLAMA_HOST={}", options.url());
@@ -91,7 +92,7 @@ async fn async_main() -> Result<(), yammer::Error> {
                 std::process::exit(1);
             }
             Request::pull(options.clone(), PullRequest::new(p.model))?
-                .accumulate(&mut JsonAccumulator::new(std::io::stdout()))
+                .accumulate(&mut (&mut signal, &mut JsonAccumulator::new(std::io::stdout())))
                 .await?;
         }
         "create" => {
@@ -104,7 +105,7 @@ async fn async_main() -> Result<(), yammer::Error> {
                 std::process::exit(1);
             }
             Request::create(options.clone(), c)?
-                .accumulate(&mut JsonAccumulator::new(std::io::stdout()))
+                .accumulate(&mut (&mut signal, &mut JsonAccumulator::new(std::io::stdout())))
                 .await?;
         }
         "models" => {
@@ -113,7 +114,7 @@ async fn async_main() -> Result<(), yammer::Error> {
                 std::process::exit(1);
             }
             Request::tags(options)?
-                .accumulate(&mut JsonAccumulator::pretty(std::io::stdout()))
+                .accumulate(&mut (&mut signal, &mut JsonAccumulator::pretty(std::io::stdout())))
                 .await?;
         }
         "show" => {
@@ -122,7 +123,7 @@ async fn async_main() -> Result<(), yammer::Error> {
                 std::process::exit(1);
             }
             Request::show(options, ShowRequest::new(args[1]))?
-                .accumulate(&mut JsonAccumulator::pretty(std::io::stdout()))
+                .accumulate(&mut (&mut signal, &mut JsonAccumulator::pretty(std::io::stdout())))
                 .await?;
         }
         "generate" => {
@@ -135,9 +136,9 @@ async fn async_main() -> Result<(), yammer::Error> {
                 std::process::exit(1);
             }
             Request::generate(options, g)?
-                .accumulate(&mut FieldWriteAccumulator::new(
-                    std::io::stdout(),
-                    "response",
+                .accumulate(&mut (
+                    &mut signal,
+                    &mut FieldWriteAccumulator::new(std::io::stdout(), "response"),
                 ))
                 .await?;
             println!();

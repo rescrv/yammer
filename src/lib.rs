@@ -6,7 +6,7 @@ use reqwest::Client;
 
 mod conversation;
 
-pub use conversation::{Conversation, ConversationOptions, Spinner};
+pub use conversation::{Conversation, ConversationOptions, SignalChecker, Spinner};
 
 /////////////////////////////////////////////// Error //////////////////////////////////////////////
 
