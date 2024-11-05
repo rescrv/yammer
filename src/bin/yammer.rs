@@ -63,7 +63,7 @@ within makefiles or scripts.
 fn main() -> Result<(), yammer::Error> {
     minimal_signals::block();
     minimal_signals::install();
-    tokio::runtime::Builder::new_multi_thread()
+    tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap()
