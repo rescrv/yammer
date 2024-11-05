@@ -1,5 +1,7 @@
 //! Yammer is a command line interface to the ollama API.
 
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::time::{Duration, SystemTime};
 
 use arrrg::CommandLine;
@@ -142,6 +144,45 @@ async fn async_main() -> Result<(), yammer::Error> {
                 ))
                 .await?;
             println!();
+        }
+        "write" => {
+            let (mut g, models) = GenerateRequest::from_arguments_relaxed(
+                "USAGE yammer [options] write [model] [model] [model]",
+                &args[1..],
+            );
+            let editor =
+                std::env::var("EDITOR").map_err(|err| yammer::Error::Message(err.to_string()))?;
+            let mut file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(".yammer.tmp")?;
+            file.write_all(g.prompt.as_bytes())?;
+            file.flush()?;
+            file.sync_all()?;
+            drop(file);
+            let status = std::process::Command::new(editor)
+                .arg(".yammer.tmp")
+                .status()?;
+            if Some(0) != status.code() {
+                std::process::exit(1);
+            }
+            if minimal_signals::pending().ismember(minimal_signals::SIGCHLD) {
+                minimal_signals::wait(minimal_signals::SIGCHLD.into());
+            }
+            g.prompt = std::fs::read_to_string(".yammer.tmp")?.trim().to_string();
+            std::fs::remove_file(".yammer.tmp")?;
+            for model in models {
+                let mut g = g.clone();
+                g.model = model;
+                Request::generate(options.clone(), g)?
+                    .accumulate(&mut (
+                        &mut signal,
+                        &mut FieldWriteAccumulator::new(std::io::stdout(), "response"),
+                    ))
+                    .await?;
+                println!();
+            }
         }
         "chat" => {
             let (mut co, free) = ConversationOptions::from_arguments_relaxed(
