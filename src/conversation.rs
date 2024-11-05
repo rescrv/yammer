@@ -122,6 +122,7 @@ impl Conversation {
             tools: None,
             format: None,
             keep_alive: None,
+            options: serde_json::json!({}),
         }
     }
 

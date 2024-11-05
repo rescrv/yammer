@@ -190,6 +190,8 @@ pub struct GenerateRequest {
     )]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub keep_alive: Option<String>,
+
+    pub options: serde_json::Value,
 }
 
 impl Default for GenerateRequest {
@@ -205,6 +207,7 @@ impl Default for GenerateRequest {
             stream: None,
             raw: None,
             keep_alive: None,
+            options: serde_json::json!({ "num_ctx": 12288 }),
         }
     }
 }
@@ -312,6 +315,7 @@ pub struct ChatRequest {
     pub stream: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub keep_alive: Option<String>,
+    pub options: serde_json::Value,
 }
 
 /////////////////////////////////////////// ChatResponse ///////////////////////////////////////////
@@ -329,6 +333,8 @@ pub struct ChatResponse {
 pub struct RequestOptions {
     #[arrrg(optional, "The URL of an ollama server.")]
     pub url: Option<String>,
+    #[arrrg(optional, "The number of context tokens.")]
+    pub num_ctx: Option<usize>,
 }
 
 impl RequestOptions {
@@ -376,8 +382,11 @@ impl Request {
 
     pub fn generate(
         options: RequestOptions,
-        generate: GenerateRequest,
+        mut generate: GenerateRequest,
     ) -> Result<Self, serde_json::Error> {
+        if let Some(num_ctx) = options.num_ctx {
+            generate.options = serde_json::json! {{ "num_ctx": num_ctx }};
+        }
         let payload = serde_json::to_string(&generate)?;
         Ok(Self {
             url: options.url(),
@@ -404,7 +413,10 @@ impl Request {
         })
     }
 
-    pub fn chat(options: RequestOptions, chat: ChatRequest) -> Result<Self, serde_json::Error> {
+    pub fn chat(options: RequestOptions, mut chat: ChatRequest) -> Result<Self, serde_json::Error> {
+        if let Some(num_ctx) = options.num_ctx {
+            chat.options = serde_json::json!({ "num_ctx": num_ctx });
+        }
         let payload = serde_json::to_string(&chat)?;
         Ok(Self {
             url: options.url(),
