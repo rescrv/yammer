@@ -18,6 +18,7 @@ use crate::{Error, Parameters, Spinner};
 //////////////////////////////////////////// ChatLogLine ///////////////////////////////////////////
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+#[allow(clippy::large_enum_variant)]
 #[serde(tag = "type")]
 pub enum ChatLogLine {
     #[serde(rename = "message")]

@@ -104,27 +104,162 @@ impl From<reqwest::Error> for Error {
 ///
 /// These correspond to the same name as PARAMETER options in Ollama.
 #[derive(
-    Clone,
-    Debug,
-    Default,
-    Eq,
-    PartialEq,
-    arrrg_derive::CommandLine,
-    serde::Deserialize,
-    serde::Serialize,
+    Clone, Debug, Default, arrrg_derive::CommandLine, serde::Deserialize, serde::Serialize,
 )]
 pub struct Parameters {
+    /// Enable Mirostat sampling for controlling perplexity. (default: 0, 0 = disabled, 1 = Mirostat, 2 = Mirostat 2.0)
+    #[arrrg(optional, "Enable Mirostat sampling for controlling perplexity. (default: 0, 0 = disabled, 1 = Mirostat, 2 = Mirostat 2.0)")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mirostat: Option<i32>,
+
+    /// Influences how quickly the algorithm responds to feedback from the generated text.
+    ///
+    /// A lower learning rate will result in slower adjustments, while a higher learning rate will
+    /// make the algorithm more responsive. (Default: 0.1)
+    #[arrrg(
+        optional,
+        "Influences how quickly the algorithm responds to feedback from the generated text."
+    )]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mirostat_eta: Option<f64>,
+
+    /// Controls the balance between coherence and diversity of the output.
+    ///
+    /// A lower value will result in more focused and coherent text. (Default: 5.0)
+    #[arrrg(
+        optional,
+        "Controls the balance between coherence and diversity of the output."
+    )]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mirostat_tau: Option<f64>,
+
     /// The number of tokens worth of context to allocate.
     #[arrrg(optional, "The number of tokens worth of context to allocate.")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub num_ctx: Option<u32>,
+
+    /// Sets how far back for the model to look back to prevent repetition.
+    ///
+    /// (Default: 64, 0 = disabled, -1 = num_ctx)
+    #[arrrg(
+        optional,
+        "Sets how far back for the model to look back to prevent repetition."
+    )]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repeat_last_n: Option<i32>,
+
+    /// Sets how strongly to penalize repetitions.
+    ///
+    /// A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value
+    /// (e.g., 0.9) will be more lenient. (Default: 1.1)
+    #[arrrg(optional, "Sets how strongly to penalize repetitions.")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repeat_penalty: Option<f64>,
+
+    /// The temperature of the model.
+    ///
+    /// Increasing the temperature will make the model answer more creatively. (Default: 0.8)
+    #[arrrg(optional, "The temperature of the model.")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub temperature: Option<f64>,
+
+    /// Sets the random number seed to use for generation.
+    ///
+    /// Setting this to a specific number will make the model generate the same text for the same
+    /// prompt.  (Default: 0)
+    #[arrrg(optional, "Sets the random number seed to use for generation.")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub seed: Option<i32>,
+
+    /// Tail free sampling is used to reduce the impact of less probable tokens from the output.
+    ///
+    /// A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this
+    /// setting. (default: 1)
+    #[arrrg(
+        optional,
+        "Tail free sampling is used to reduce the impact of less probable tokens from the output."
+    )]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tfs_z: Option<f64>,
+
+    /// Maximum number of tokens to predict when generating text.
+    ///
+    /// (Default: 128, -1 = infinite generation, -2 = fill context)
+    #[arrrg(optional, "Maximum number of tokens to predict when generating text.")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub num_predict: Option<i32>,
+
+    /// Reduces the probability of generating nonsense.
+    ///
+    /// A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10)
+    /// will be more conservative. (Default: 40)
+    #[arrrg(optional, "Reduces the probability of generating nonsense.")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub top_k: Option<i32>,
+
+    /// Works together with top-k.
+    ///
+    /// A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5)
+    /// will generate more focused and conservative text. (Default: 0.9)
+    #[arrrg(optional, "Works together with top-k.")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub top_p: Option<f64>,
+
+    /// Alternative to the top_p, and aims to ensure a balance of quality and variety.
+    ///
+    /// The parameter p represents the minimum probability for a token to be considered, relative
+    /// to the probability of the most likely token. For example, with p=0.05 and the most likely
+    /// token having a probability of 0.9, logits with a value less than 0.045 are filtered out.
+    /// (Default: 0.0)
+    #[arrrg(
+        optional,
+        "Alternative to the top_p, and aims to ensure a balance of quality and variety."
+    )]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_p: Option<f64>,
 }
 
 impl Parameters {
     /// Overlay the parameters from another set of parameters.
     pub fn apply(&mut self, from: Self) {
+        if let Some(mirostat) = from.mirostat {
+            self.mirostat = Some(mirostat);
+        }
+        if let Some(mirostat_eta) = from.mirostat_eta {
+            self.mirostat_eta = Some(mirostat_eta);
+        }
+        if let Some(mirostat_tau) = from.mirostat_tau {
+            self.mirostat_tau = Some(mirostat_tau);
+        }
         if let Some(num_ctx) = from.num_ctx {
             self.num_ctx = Some(num_ctx);
+        }
+        if let Some(repeat_last_n) = from.repeat_last_n {
+            self.repeat_last_n = Some(repeat_last_n);
+        }
+        if let Some(repeat_penalty) = from.repeat_penalty {
+            self.repeat_penalty = Some(repeat_penalty);
+        }
+        if let Some(temperature) = from.temperature {
+            self.temperature = Some(temperature);
+        }
+        if let Some(seed) = from.seed {
+            self.seed = Some(seed);
+        }
+        if let Some(tfs_z) = from.tfs_z {
+            self.tfs_z = Some(tfs_z);
+        }
+        if let Some(num_predict) = from.num_predict {
+            self.num_predict = Some(num_predict);
+        }
+        if let Some(top_k) = from.top_k {
+            self.top_k = Some(top_k);
+        }
+        if let Some(top_p) = from.top_p {
+            self.top_p = Some(top_p);
+        }
+        if let Some(min_p) = from.min_p {
+            self.min_p = Some(min_p);
         }
     }
 }
@@ -132,10 +267,66 @@ impl Parameters {
 impl From<Parameters> for serde_json::Value {
     fn from(p: Parameters) -> serde_json::Value {
         let mut json = serde_json::json!({});
-        if let Some(num_ctx) = p.num_ctx.as_ref() {
+        if let Some(mirostat) = p.mirostat {
+            json["mirostat"] = serde_json::json!(mirostat);
+        }
+        if let Some(mirostat_eta) = p.mirostat_eta {
+            json["mirostat_eta"] = serde_json::json!(mirostat_eta);
+        }
+        if let Some(mirostat_tau) = p.mirostat_tau {
+            json["mirostat_tau"] = serde_json::json!(mirostat_tau);
+        }
+        if let Some(num_ctx) = p.num_ctx {
             json["num_ctx"] = serde_json::json!(num_ctx);
         }
+        if let Some(repeat_last_n) = p.repeat_last_n {
+            json["repeat_last_n"] = serde_json::json!(repeat_last_n);
+        }
+        if let Some(repeat_penalty) = p.repeat_penalty {
+            json["repeat_penalty"] = serde_json::json!(repeat_penalty);
+        }
+        if let Some(temperature) = p.temperature {
+            json["temperature"] = serde_json::json!(temperature);
+        }
+        if let Some(seed) = p.seed {
+            json["seed"] = serde_json::json!(seed);
+        }
+        if let Some(tfs_z) = p.tfs_z {
+            json["tfs_z"] = serde_json::json!(tfs_z);
+        }
+        if let Some(num_predict) = p.num_predict {
+            json["num_predict"] = serde_json::json!(num_predict);
+        }
+        if let Some(top_k) = p.top_k {
+            json["top_k"] = serde_json::json!(top_k);
+        }
+        if let Some(top_p) = p.top_p {
+            json["top_p"] = serde_json::json!(top_p);
+        }
+        if let Some(min_p) = p.min_p {
+            json["min_p"] = serde_json::json!(min_p);
+        }
         json
+    }
+}
+
+impl Eq for Parameters {}
+
+impl PartialEq for Parameters {
+    fn eq(&self, other: &Self) -> bool {
+        self.mirostat == other.mirostat
+            && self.mirostat_eta == other.mirostat_eta
+            && self.mirostat_tau == other.mirostat_tau
+            && self.num_ctx == other.num_ctx
+            && self.repeat_last_n == other.repeat_last_n
+            && self.repeat_penalty == other.repeat_penalty
+            && self.temperature == other.temperature
+            && self.seed == other.seed
+            && self.tfs_z == other.tfs_z
+            && self.num_predict == other.num_predict
+            && self.top_k == other.top_k
+            && self.top_p == other.top_p
+            && self.min_p == other.min_p
     }
 }
 
