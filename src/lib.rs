@@ -14,10 +14,12 @@ mod chat;
 mod chats;
 mod cli;
 mod types;
+mod wrap;
 
 pub use chat::{Chat, ChatOptions};
 pub use chats::{Chats, ChatsOptions};
 pub use types::{ChatMessage, ChatRequest, ChatResponse, GenerateRequest, GenerateResponse};
+pub use wrap::WordWrap;
 
 ///////////////////////////////////////////// constants ////////////////////////////////////////////
 
@@ -430,10 +432,10 @@ pub async fn shellm(
             options: options.param.clone().into(),
         };
         let req = gen.make_request(&ollama_host(options.ollama_host.clone()));
+        let mut ww = WordWrap::new(100);
         let res = stream(req, |v| {
             if let Some(serde_json::Value::String(message)) = v.get("response") {
-                write!(std::io::stdout(), "{}", message)?;
-                std::io::stdout().flush()?;
+                ww.push(message.clone(), &mut std::io::stdout())?;
             }
             Ok(())
         })
@@ -639,10 +641,10 @@ pub async fn prompt(
             options: options.param.clone().into(),
         };
         let req = gen.make_request(&ollama_host(options.ollama_host.clone()));
+        let mut ww = WordWrap::new(100);
         let res = stream(req, |v| {
             if let Some(serde_json::Value::String(message)) = v.get("response") {
-                write!(std::io::stdout(), "{}", message)?;
-                std::io::stdout().flush()?;
+                ww.push(message.clone(), &mut std::io::stdout())?;
             }
             Ok(())
         })

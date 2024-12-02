@@ -13,7 +13,7 @@ use utf8path::Path;
 
 use crate::cli::{CommandHint, ShellHelper, TabEventHandler};
 use crate::types::{ChatMessage, ChatRequest};
-use crate::{Error, Parameters, Spinner};
+use crate::{Error, Parameters, Spinner, WordWrap};
 
 //////////////////////////////////////////// ChatLogLine ///////////////////////////////////////////
 
@@ -491,12 +491,12 @@ impl Chat {
             let spinner = Spinner::new();
             spinner.start();
             let mut pieces = vec![];
+            let mut ww = WordWrap::new(100);
             let res = crate::stream(req, |resp| {
                 spinner.inhibit();
                 if let Some(serde_json::Value::Object(message)) = resp.get("message") {
                     if let Some(serde_json::Value::String(content)) = message.get("content") {
-                        write!(std::io::stdout(), "{}", content)?;
-                        std::io::stdout().flush()?;
+                        ww.push(content.clone(), &mut std::io::stdout())?;
                     }
                 }
                 pieces.push(resp);
