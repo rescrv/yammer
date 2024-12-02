@@ -411,7 +411,21 @@ impl Chat {
                     break Ok(());
                 }
                 ":help" => {
-                    todo!();
+                    eprintln!(
+                        r#"chat
+====
+
+Commands:
+
+:model <model>  Set the model to use.
+:edit           Edit and send the next message.
+:retry          Retry the last message.
+:param          Set parameters for the model (e.g. --temperature 0.5).
+
+Anything else will be interpreted as a message.
+"#
+                    );
+                    continue;
                 }
                 ":model" => {
                     if args.len() < 2 {
@@ -474,15 +488,22 @@ impl Chat {
                     self.save_options()?;
                     continue;
                 }
-                _ => ChatLogLine::Message {
-                    created_at: chrono::Local::now(),
-                    message: ChatMessage {
-                        role: "user".to_string(),
-                        content: line,
-                        images: None,
-                        tool_calls: None,
-                    },
-                },
+                _ => {
+                    if !args[0].starts_with(':') {
+                        ChatLogLine::Message {
+                            created_at: chrono::Local::now(),
+                            message: ChatMessage {
+                                role: "user".to_string(),
+                                content: line,
+                                images: None,
+                                tool_calls: None,
+                            },
+                        }
+                    } else {
+                        eprintln!("unknown command: {}", args[0]);
+                        continue;
+                    }
+                }
             };
             self.log(&log_line)?;
             self.apply(log_line);

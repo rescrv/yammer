@@ -146,7 +146,25 @@ impl Chats {
                     break Ok(());
                 }
                 "help" => {
-                    todo!("{}", line);
+                    eprintln!(
+                        r#"chats
+=====
+
+Commands:
+
+status      Show the status of all chats.
+archive     Archive a chat.
+unarchive   Unarchive a chat.
+archived    Show all archived chats.
+pin         Pin a chat.
+unpin       Unpin a chat.
+pinned      Show all pinned chats.
+new         Start a new chat.
+chat        Continue a chat.
+editor      Start a chat with a system message written in EDITOR.
+"#
+                    );
+                    continue;
                 }
                 "status" => {
                     self.status();
