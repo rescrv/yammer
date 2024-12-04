@@ -4,7 +4,7 @@ use std::hash::BuildHasher;
 use std::io::{BufRead, Write};
 use std::time::{Instant, SystemTime};
 
-use arrrg::CommandLine;
+use arrrg::{CommandLine, NoExitCommandLine};
 use rustyline::config::EditMode;
 use rustyline::error::ReadlineError;
 use rustyline::hint::HistoryHinter;
@@ -478,8 +478,17 @@ Anything else will be interpreted as a message.
                         continue;
                     }
                     // TODO(rescrv):  Non-exiting version of arrrg::CommandLine.
-                    let (param, free) =
-                        Parameters::from_arguments_relaxed("USAGE: params --key value", &args[1..]);
+                    let (param, free) = NoExitCommandLine::<Parameters>::from_arguments_relaxed(
+                        ":param --key value",
+                        &args[1..],
+                    );
+                    let (param, errors, status) = param.into_parts();
+                    if status != 0 {
+                        for error in errors {
+                            eprintln!("{}", error);
+                        }
+                        continue;
+                    }
                     if !free.is_empty() {
                         eprintln!("command takes no positional arguments");
                         continue;

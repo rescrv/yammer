@@ -8,16 +8,16 @@ license = "Apache-2.0"
 repository = "https://github.com/rescrv/yammer"
 
 [dependencies]
+chrono = { version = "0.4.38", features = ["serde"] }
 getopts = "0.2"
-rustyline = { version = "14", features = ["derive"] }
 reqwest = { version = "0.12", features = ["json"] }
-serde = { version = "1.0", features = ["derive"] }
+rustyline = { version = "14", features = ["derive"] }
 serde_json = { version = "1.0" }
+serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.40", features = ["rt", "rt-multi-thread", "macros"] }
 
-arrrg = "0.5"
-arrrg_derive = "0.5"
+arrrg = "0.6"
+arrrg_derive = "0.6"
 minimal_signals = "0.4"
-shvar = "0.5.0"
-utf8path = "0.6.0"
-chrono = { version = "0.4.38", features = ["serde"] }
+shvar = "0.5"
+utf8path = "0.6"
