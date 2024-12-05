@@ -367,6 +367,12 @@ pub struct ShellmOptions {
     /// Additional options to pass to the model.
     #[arrrg(nested)]
     pub param: Parameters,
+    /// Wrap at this line length, or 0 to disable yammer-induced wrapping.
+    #[arrrg(
+        optional,
+        "Wrap at this line length, or 0 to disable yammer-induced wrapping."
+    )]
+    pub wrap: Option<usize>,
 }
 
 impl Default for ShellmOptions {
@@ -382,6 +388,7 @@ impl Default for ShellmOptions {
             raw: None,
             keep_alive: None,
             param: Parameters::default(),
+            wrap: None,
         }
     }
 }
@@ -432,7 +439,7 @@ pub async fn shellm(
             options: options.param.clone().into(),
         };
         let req = gen.make_request(&ollama_host(options.ollama_host.clone()));
-        let mut ww = WordWrap::new(100);
+        let mut ww = WordWrap::new(options.wrap.unwrap_or(100));
         let res = stream(req, |v| {
             if let Some(serde_json::Value::String(message)) = v.get("response") {
                 ww.push(message.clone(), &mut std::io::stdout())?;
@@ -482,6 +489,12 @@ pub struct OneshotOptions {
     /// Additional options to pass to the model.
     #[arrrg(nested)]
     pub param: Parameters,
+    /// Wrap at this line length, or 0 to disable yammer-induced wrapping.
+    #[arrrg(
+        optional,
+        "Wrap at this line length, or 0 to disable yammer-induced wrapping."
+    )]
+    pub wrap: Option<usize>,
 }
 
 impl Default for OneshotOptions {
@@ -495,6 +508,7 @@ impl Default for OneshotOptions {
             raw: None,
             keep_alive: None,
             param: Parameters::default(),
+            wrap: None,
         }
     }
 }
@@ -556,6 +570,7 @@ pub async fn oneshot(
             raw: options.raw,
             keep_alive: options.keep_alive.clone(),
             param: options.param.clone(),
+            wrap: options.wrap,
         };
         shellm(options, &[path.as_ref()]).await?;
     }
@@ -597,6 +612,12 @@ pub struct PromptOptions {
     /// Additional options to pass to the model.
     #[arrrg(nested)]
     pub param: Parameters,
+    /// Wrap at this line length, or 0 to disable yammer-induced wrapping.
+    #[arrrg(
+        optional,
+        "Wrap at this line length, or 0 to disable yammer-induced wrapping."
+    )]
+    pub wrap: Option<usize>,
 }
 
 impl Default for PromptOptions {
@@ -611,6 +632,7 @@ impl Default for PromptOptions {
             raw: None,
             keep_alive: None,
             param: Parameters::default(),
+            wrap: None,
         }
     }
 }
@@ -641,7 +663,7 @@ pub async fn prompt(
             options: options.param.clone().into(),
         };
         let req = gen.make_request(&ollama_host(options.ollama_host.clone()));
-        let mut ww = WordWrap::new(100);
+        let mut ww = WordWrap::new(options.wrap.unwrap_or(100));
         let res = stream(req, |v| {
             if let Some(serde_json::Value::String(message)) = v.get("response") {
                 ww.push(message.clone(), &mut std::io::stdout())?;

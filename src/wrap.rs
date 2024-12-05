@@ -10,7 +10,10 @@ pub struct WordWrap {
 
 impl WordWrap {
     /// Create a new word-wrapping struct that wraps at `width`.
-    pub fn new(width: usize) -> Self {
+    pub fn new(mut width: usize) -> Self {
+        if width == 0 {
+            width = usize::MAX;
+        }
         Self {
             width,
             indent: vec![],
