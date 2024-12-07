@@ -5,7 +5,7 @@ use yammer::ChatsOptions;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     minimal_signals::install();
     minimal_signals::block();
-    let (options, free) = ChatsOptions::from_command_line("USAGE: chats [OPTIONS]");
+    let (options, free) = ChatsOptions::from_command_line_relaxed("USAGE: chats [OPTIONS]");
     if !free.is_empty() {
         eprintln!("command takes no positional arguments");
         std::process::exit(1);

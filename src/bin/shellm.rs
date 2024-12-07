@@ -6,7 +6,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     minimal_signals::install();
     minimal_signals::block();
     let (options, mut promptfiles) =
-        ShellmOptions::from_command_line("USAGE: shellm [OPTIONS] [FILE]");
+        ShellmOptions::from_command_line_relaxed("USAGE: shellm [OPTIONS] [FILE]");
     if promptfiles.is_empty() {
         promptfiles.push("-".to_string());
     }
