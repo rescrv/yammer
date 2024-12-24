@@ -18,7 +18,10 @@ mod wrap;
 
 pub use chat::{Chat, ChatOptions};
 pub use chats::{Chats, ChatsOptions};
-pub use types::{ChatMessage, ChatRequest, ChatResponse, GenerateRequest, GenerateResponse};
+pub use types::{
+    ChatMessage, ChatRequest, ChatResponse, EmbedRequest, EmbedResponse, GenerateRequest,
+    GenerateResponse,
+};
 pub use wrap::WordWrap;
 
 ///////////////////////////////////////////// constants ////////////////////////////////////////////
@@ -345,7 +348,7 @@ pub struct ShellmOptions {
     pub model: String,
     /// The suffix to append to the response.
     #[arrrg(optional, "The suffix to append to the response.")]
-    pub suffix: String,
+    pub suffix: Option<String>,
     /// The system to use in the template.
     #[arrrg(optional, "The system to use in the template.")]
     pub system: Option<String>,
@@ -381,7 +384,7 @@ impl Default for ShellmOptions {
             ollama_host: None,
             // TODO(rescrv):  Don't hard-code the default model.
             model: "gemma2".to_string(),
-            suffix: "".to_string(),
+            suffix: None,
             system: None,
             template: None,
             json: false,
@@ -436,7 +439,7 @@ pub async fn shellm(
             stream: Some(true),
             raw: options.raw,
             keep_alive: None,
-            options: options.param.clone().into(),
+            options: Some(options.param.clone().into()),
         };
         let req = gen.make_request(&ollama_host(options.ollama_host.clone()));
         let mut ww = WordWrap::new(options.wrap.unwrap_or(100));
@@ -467,7 +470,7 @@ pub struct OneshotOptions {
     pub ollama_host: Option<String>,
     /// The suffix to append to the response.
     #[arrrg(optional, "The suffix to append to the response.")]
-    pub suffix: String,
+    pub suffix: Option<String>,
     /// The system to use in the template.
     #[arrrg(optional, "The system to use in the template.")]
     pub system: Option<String>,
@@ -501,7 +504,7 @@ impl Default for OneshotOptions {
     fn default() -> Self {
         OneshotOptions {
             ollama_host: None,
-            suffix: "".to_string(),
+            suffix: None,
             system: None,
             template: None,
             json: false,
@@ -590,7 +593,7 @@ pub struct PromptOptions {
     pub model: String,
     /// The suffix to append to the response.
     #[arrrg(optional, "The suffix to append to the response.")]
-    pub suffix: String,
+    pub suffix: Option<String>,
     /// The system to use in the template.
     #[arrrg(optional, "The system to use in the template.")]
     pub system: Option<String>,
@@ -625,7 +628,7 @@ impl Default for PromptOptions {
         PromptOptions {
             ollama_host: None,
             model: "gemma2".to_string(),
-            suffix: "".to_string(),
+            suffix: None,
             system: None,
             template: None,
             json: false,
@@ -660,7 +663,7 @@ pub async fn prompt(
             stream: Some(true),
             raw: options.raw,
             keep_alive: None,
-            options: options.param.clone().into(),
+            options: Some(options.param.clone().into()),
         };
         let req = gen.make_request(&ollama_host(options.ollama_host.clone()));
         let mut ww = WordWrap::new(options.wrap.unwrap_or(100));

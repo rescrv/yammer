@@ -14,7 +14,8 @@ pub struct GenerateRequest {
 
     /// The suffix to append to the prompt.  This is useful for generating a response that is a
     /// continuation of the prompt.
-    pub suffix: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub suffix: Option<String>,
 
     /// A list of base64-encoded images to supply to the model.
     pub images: Option<Vec<String>>,
@@ -44,7 +45,8 @@ pub struct GenerateRequest {
     pub keep_alive: Option<String>,
 
     /// Additional options to pass to the model.
-    pub options: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub options: Option<serde_json::Value>,
 }
 
 impl Default for GenerateRequest {
@@ -52,7 +54,7 @@ impl Default for GenerateRequest {
         Self {
             model: "gemma2".to_string(),
             prompt: "42".to_string(),
-            suffix: "".to_string(),
+            suffix: None,
             images: None,
             format: None,
             system: None,
@@ -60,7 +62,7 @@ impl Default for GenerateRequest {
             stream: None,
             raw: None,
             keep_alive: None,
-            options: serde_json::json!({ "num_ctx": 12288 }),
+            options: Some(serde_json::json!({ "num_ctx": 12288 })),
         }
     }
 }
@@ -87,6 +89,8 @@ pub struct GenerateResponse {
     pub response: String,
     /// Whether the response is done.
     pub done: bool,
+    /// Why the response is done.
+    pub done_reason: Option<String>,
     /// The duration of the response.
     pub total_duration: Option<f64>,
     /// The duration of loading the model.
@@ -179,4 +183,41 @@ pub struct ChatResponse {
     pub eval_count: Option<f64>,
     /// The duration of the response evaluation.
     pub eval_duration: Option<f64>,
+}
+
+/////////////////////////////////////////// EmbedRequest ///////////////////////////////////////////
+
+/// A request to embed multiple input documents.
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct EmbedRequest {
+    /// The name of the model to use for embedding.
+    pub model: String,
+    /// The input texts to embed.
+    pub input: Vec<String>,
+}
+
+impl EmbedRequest {
+    /// Create a new RequestBuilder for this embed request.
+    pub fn make_request(&self, ollama_host: &str) -> RequestBuilder {
+        reqwest::Client::new()
+            .post(format!("{}/api/embed", ollama_host))
+            .json(self)
+    }
+}
+
+/////////////////////////////////////////// EmbedResponse //////////////////////////////////////////
+
+/// A response to an embed response.
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct EmbedResponse {
+    /// The name of the model used to generate the response.
+    pub model: String,
+    /// The embeddings of the input, in the same order.
+    pub embeddings: Vec<Vec<f32>>,
+    /// The duration of the response.
+    pub total_duration: Option<f64>,
+    /// The duration of loading the model.
+    pub load_duration: Option<f64>,
+    /// The number of tokens counted in the prompt.
+    pub prompt_eval_count: Option<f64>,
 }
