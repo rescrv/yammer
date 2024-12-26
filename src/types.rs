@@ -104,7 +104,7 @@ pub struct GenerateResponse {
     /// The duration of the response evaluation.
     pub eval_duration: Option<f64>,
     /// The context for a future generate call.
-    pub context: Vec<f64>,
+    pub context: Option<Vec<f64>>,
 }
 
 //////////////////////////////////////////// ChatMessage ///////////////////////////////////////////
