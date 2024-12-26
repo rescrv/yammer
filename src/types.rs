@@ -22,7 +22,7 @@ pub struct GenerateRequest {
 
     /// The format to return the response in.  If provided, this must be "json".
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub format: Option<String>,
+    pub format: Option<serde_json::Value>,
 
     /// The system to use for the response.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -138,7 +138,7 @@ pub struct ChatRequest {
     pub tools: Option<serde_json::Value>,
     /// The format to return the response in.  If provided, this must be "json".
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub format: Option<String>,
+    pub format: Option<serde_json::Value>,
     /// Should this response stream?
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stream: Option<bool>,

@@ -361,6 +361,12 @@ pub struct ShellmOptions {
         "Format the response in JSON.  You must also ask the model to do so."
     )]
     pub json: bool,
+    /// Schema to adhere to when formatting the response in JSON.  Has no effect without --json.
+    #[arrrg(
+        optional,
+        "Schema to adhere to when formatting the response in JSON.  Has no effect without --json."
+    )]
+    pub schema: Option<serde_json::Value>,
     /// Whether to pass bypass formatting of the prompt.
     #[arrrg(optional, "Whether to pass bypass formatting of the prompt.")]
     pub raw: Option<bool>,
@@ -388,6 +394,7 @@ impl Default for ShellmOptions {
             system: None,
             template: None,
             json: false,
+            schema: None,
             raw: None,
             keep_alive: None,
             param: Parameters::default(),
@@ -430,7 +437,11 @@ pub async fn shellm(
             suffix: options.suffix.clone(),
             images: None,
             format: if options.json {
-                Some("json".to_string())
+                if let Some(schema) = options.schema.clone() {
+                    Some(schema)
+                } else {
+                    Some(serde_json::Value::String("json".to_string()))
+                }
             } else {
                 None
             },
@@ -483,6 +494,12 @@ pub struct OneshotOptions {
         "Format the response in JSON.  You must also ask the model to do so."
     )]
     pub json: bool,
+    /// Schema to adhere to when formatting the response in JSON.  Has no effect without --json.
+    #[arrrg(
+        optional,
+        "Schema to adhere to when formatting the response in JSON.  Has no effect without --json."
+    )]
+    pub schema: Option<serde_json::Value>,
     /// Whether to pass bypass formatting of the prompt.
     #[arrrg(optional, "Whether to pass bypass formatting of the prompt.")]
     pub raw: Option<bool>,
@@ -508,6 +525,7 @@ impl Default for OneshotOptions {
             system: None,
             template: None,
             json: false,
+            schema: None,
             raw: None,
             keep_alive: None,
             param: Parameters::default(),
@@ -570,6 +588,7 @@ pub async fn oneshot(
             system: options.system.clone(),
             template: options.template.clone(),
             json: options.json,
+            schema: options.schema.clone(),
             raw: options.raw,
             keep_alive: options.keep_alive.clone(),
             param: options.param.clone(),
@@ -606,6 +625,12 @@ pub struct PromptOptions {
         "Format the response in JSON.  You must also ask the model to do so."
     )]
     pub json: bool,
+    /// Schema to adhere to when formatting the response in JSON.  Has no effect without --json.
+    #[arrrg(
+        optional,
+        "Schema to adhere to when formatting the response in JSON.  Has no effect without --json."
+    )]
+    pub schema: Option<serde_json::Value>,
     /// Whether to pass bypass formatting of the prompt.
     #[arrrg(optional, "Whether to pass bypass formatting of the prompt.")]
     pub raw: Option<bool>,
@@ -633,6 +658,7 @@ impl Default for PromptOptions {
             template: None,
             json: false,
             raw: None,
+            schema: None,
             keep_alive: None,
             param: Parameters::default(),
             wrap: None,
@@ -654,7 +680,11 @@ pub async fn prompt(
             suffix: options.suffix.clone(),
             images: None,
             format: if options.json {
-                Some("json".to_string())
+                if let Some(schema) = options.schema.clone() {
+                    Some(schema)
+                } else {
+                    Some(serde_json::Value::String("json".to_string()))
+                }
             } else {
                 None
             },
