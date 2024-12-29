@@ -477,7 +477,6 @@ Anything else will be interpreted as a message.
                         println!("{:#?}", self.options.param);
                         continue;
                     }
-                    // TODO(rescrv):  Non-exiting version of arrrg::CommandLine.
                     let (param, free) = NoExitCommandLine::<Parameters>::from_arguments_relaxed(
                         ":param --key value",
                         &args[1..],
