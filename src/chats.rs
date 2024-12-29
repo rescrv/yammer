@@ -92,7 +92,7 @@ impl Chats {
             CommandHint::new("help", "help"),
             CommandHint::new("exit", "exit"),
             CommandHint::new("quit", "quit"),
-            CommandHint::new("status", "status"),
+            CommandHint::new("list", "list"),
             CommandHint::new("archive", "archive"),
             CommandHint::new("unarchive", "unarchive"),
             CommandHint::new("archived", "archived"),
@@ -113,7 +113,7 @@ impl Chats {
             KeyEvent::from('\t'),
             EventHandler::Conditional(Box::new(TabEventHandler)),
         );
-        self.status();
+        self.list();
         loop {
             let line = rl.readline(PROMPT);
             let (args, line) = match line {
@@ -152,7 +152,7 @@ impl Chats {
 
 Commands:
 
-status      Show the status of all chats.
+list        Show all chats.
 archive     Archive a chat.
 unarchive   Unarchive a chat.
 archived    Show all archived chats.
@@ -166,8 +166,8 @@ editor      Start a chat with a system message written in EDITOR.
                     );
                     continue;
                 }
-                "status" => {
-                    self.status();
+                "list" => {
+                    self.list();
                 }
                 "archive" => {
                     if args.len() != 2 {
@@ -292,7 +292,7 @@ editor      Start a chat with a system message written in EDITOR.
         }
     }
 
-    fn status(&self) {
+    fn list(&self) {
         let mut summaries = match self.load() {
             Ok(summaries) => summaries,
             Err(err) => {
