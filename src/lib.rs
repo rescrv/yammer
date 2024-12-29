@@ -474,7 +474,7 @@ pub async fn shellm(
 ////////////////////////////////////////// OneShotOptions //////////////////////////////////////////
 
 /// Options for the `oneshot` command.
-#[derive(Clone, Debug, Eq, PartialEq, arrrg_derive::CommandLine)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, arrrg_derive::CommandLine)]
 pub struct OneshotOptions {
     /// The host to connect to.
     #[arrrg(optional, "The host to connect to.")]
@@ -515,23 +515,6 @@ pub struct OneshotOptions {
         "Wrap at this line length, or 0 to disable yammer-induced wrapping."
     )]
     pub wrap: Option<usize>,
-}
-
-impl Default for OneshotOptions {
-    fn default() -> Self {
-        OneshotOptions {
-            ollama_host: None,
-            suffix: None,
-            system: None,
-            template: None,
-            json: false,
-            schema: None,
-            raw: None,
-            keep_alive: None,
-            param: Parameters::default(),
-            wrap: None,
-        }
-    }
 }
 
 ////////////////////////////////////////////// editor //////////////////////////////////////////////
