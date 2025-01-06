@@ -228,6 +228,38 @@ editor      Start a chat with a system message written in EDITOR.
                     }
                     self.editor_chat().await;
                 }
+                "copy" => {
+                    if args.len() != 2 {
+                        eprintln!("USAGE: copy <chat>");
+                        continue;
+                    }
+                    let from = match super::chat_path(&args[1]) {
+                        Ok(path) => path,
+                        Err(err) => {
+                            eprintln!("could not copy: {err}");
+                            continue;
+                        }
+                    };
+                    let chat_id = match crate::chat::chat_id() {
+                        Ok(chat_id) => chat_id,
+                        Err(err) => {
+                            eprintln!("could not generate chat id: {err}");
+                            continue;
+                        }
+                    };
+                    let to = match super::chat_path(&chat_id) {
+                        Ok(path) => path,
+                        Err(err) => {
+                            eprintln!("could not copy: {err}");
+                            continue;
+                        }
+                    };
+                    std::fs::create_dir_all(to.dirname())?;
+                    if let Err(err) = std::fs::copy(from, to) {
+                        eprintln!("could not copy: {err}");
+                        continue;
+                    }
+                }
                 _ => {
                     eprintln!("unknown command: {}", args[0]);
                     continue;

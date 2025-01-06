@@ -552,7 +552,7 @@ Anything else will be interpreted as a message.
 
 ////////////////////////////////////////////// chat_id /////////////////////////////////////////////
 
-fn chat_id() -> Result<String, Error> {
+pub fn chat_id() -> Result<String, Error> {
     let s = RandomState::new();
     let mut random = s.hash_one(Instant::now());
     const BASE20: [char; 20] = [
