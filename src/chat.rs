@@ -441,7 +441,40 @@ Anything else will be interpreted as a message.
                     continue;
                 }
                 ":edit" => {
-                    let promptfile = match crate::editor() {
+                    let promptfile = match crate::editor("Replace this text with your prompt.") {
+                        Ok(promptfile) => promptfile,
+                        Err(err) => {
+                            eprintln!("could not edit: {:?}", err);
+                            continue;
+                        }
+                    };
+                    let prompt = std::fs::read_to_string(promptfile.as_ref())?;
+                    writeln!(
+                        std::io::stdout(),
+                        "{}",
+                        prompt
+                            .split_terminator('\n')
+                            .map(|x| "... ".to_string() + x)
+                            .collect::<Vec<_>>()
+                            .join("\n")
+                    )?;
+                    ChatLogLine::Message {
+                        created_at: chrono::Local::now(),
+                        message: ChatMessage {
+                            role: "user".to_string(),
+                            content: prompt,
+                            images: None,
+                            tool_calls: None,
+                        },
+                    }
+                }
+                ":reply" => {
+                    let reply_to = if !self.messages.is_empty() {
+                        &self.messages[self.messages.len() - 1].content
+                    } else {
+                        ""
+                    };
+                    let promptfile = match crate::editor(reply_to) {
                         Ok(promptfile) => promptfile,
                         Err(err) => {
                             eprintln!("could not edit: {:?}", err);

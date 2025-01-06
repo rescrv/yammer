@@ -499,7 +499,7 @@ editor      Start a chat with a system message written in EDITOR.
                 return;
             }
         };
-        let system = match crate::editor() {
+        let system = match crate::editor("This will become the system prompt.") {
             Ok(system) => system,
             Err(err) => {
                 eprintln!("could not get system message: {:?}", err);

@@ -519,7 +519,7 @@ pub struct OneshotOptions {
 
 ////////////////////////////////////////////// editor //////////////////////////////////////////////
 
-fn editor() -> Result<impl AsRef<String>, Error> {
+fn editor(default: &str) -> Result<impl AsRef<String>, Error> {
     let path = format!(
         ".yammer.{}.{}",
         std::process::id(),
@@ -545,6 +545,7 @@ fn editor() -> Result<impl AsRef<String>, Error> {
         .write(true)
         .open(&path)?;
     let unlink = UnlinkOnDrop(path.clone());
+    file.write_all(default.as_bytes())?;
     file.flush()?;
     file.sync_all()?;
     drop(file);
@@ -562,7 +563,7 @@ pub async fn oneshot(
     options: OneshotOptions,
     models: &[impl AsRef<str>],
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let path = editor()?;
+    let path = editor("Replace this text with your prompt.")?;
     for model in models {
         let options = ShellmOptions {
             ollama_host: options.ollama_host.clone(),
