@@ -1,6 +1,6 @@
 [package]
 name = "yammer"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["Robert Escriva <robert@rescrv.net>"]
 edition = "2021"
 description = "yammer provides an ollama-compatible client library."
@@ -21,4 +21,4 @@ arrrg_derive = "0.6"
 minimal_signals = "0.4"
 shvar = "0.5"
 utf8path = "0.6"
-libc = "0.2.168"
+libc = "0.2"
