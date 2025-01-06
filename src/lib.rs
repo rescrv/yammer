@@ -826,11 +826,11 @@ impl Spinner {
                 if *inhibited_p {
                     continue;
                 }
-                let mut stdout = std::io::stdout().lock();
-                let _ = stdout.write(b"\x1b[2K\r");
-                let _ = stdout.write(SPINNER[i % SPINNER.len()].as_bytes());
-                let _ = stdout.write(" ".as_bytes());
-                let _ = stdout.flush();
+                let mut stderr = std::io::stderr().lock();
+                let _ = stderr.write(b"\x1b[2K\r");
+                let _ = stderr.write(SPINNER[i % SPINNER.len()].as_bytes());
+                let _ = stderr.write(" ".as_bytes());
+                let _ = stderr.flush();
                 i += 1;
             }
         });
@@ -851,8 +851,8 @@ impl Spinner {
         let mut inhibited = self.inhibited.lock().unwrap();
         if !*inhibited {
             *inhibited = true;
-            let mut stdout = std::io::stdout().lock();
-            let _ = stdout.write(b"\x1b[2K\r");
+            let mut stderr = std::io::stderr().lock();
+            let _ = stderr.write(b"\x1b[2K\r");
         }
     }
 }
