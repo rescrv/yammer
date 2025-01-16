@@ -22,3 +22,4 @@ minimal_signals = "0.4"
 shvar = "0.5"
 utf8path = "0.6"
 libc = "0.2"
+yammer-derive = { "path" = "derive", version = "0.1.0" }
