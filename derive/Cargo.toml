@@ -1,7 +1,11 @@
 [package]
 name = "yammer-derive"
 version = "0.1.0"
+authors = ["Robert Escriva <robert@rescrv.net>"]
 edition = "2021"
+description = "yammer-derive derives JsonSchema"
+license = "Apache-2.0"
+repository = "https://github.com/rescrv/yammer"
 
 [lib]
 proc-macro = true
