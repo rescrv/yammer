@@ -955,3 +955,100 @@ impl<T: JsonSchema> JsonSchema for Vec<T> {
         serde_json::json! {{ "type": "array", "items": <T as JsonSchema>::json_schema() }}
     }
 }
+
+//////////////////////////////////////////// ToolBuilder ///////////////////////////////////////////
+
+/// Build a tool for use in chat completions.
+pub struct ToolBuilder {
+    name: String,
+    description: String,
+    fields: Vec<(String, serde_json::Value)>,
+}
+
+impl ToolBuilder {
+    /// Create a new tool.  Name is the name of the function, and description is a plain-language
+    /// description of what it does.
+    pub fn new(name: &str, description: &str) -> Self {
+        let name = name.to_string();
+        let description = description.to_string();
+        let fields = vec![];
+        Self {
+            name,
+            description,
+            fields,
+        }
+    }
+
+    /// Append an argument to the tool call.  All arguments are required by convention.
+    pub fn arg<T: JsonSchema>(mut self, name: &str) -> Self {
+        self.fields.push((name.to_string(), T::json_schema()));
+        self
+    }
+
+    /// Consume the [ToolBuilder] and return a JSON blob suitable for passing to Ollama.
+    pub fn build(self) -> serde_json::Value {
+        let mut properties = serde_json::json! {{}};
+        let mut required = vec![];
+        for (name, schema) in self.fields.into_iter() {
+            properties[name.clone()] = schema;
+            required.push(name);
+        }
+        let required: serde_json::Value = required.into();
+        let parameters = serde_json::json! {{
+            "type": "object",
+            "properties": properties,
+            "required": required,
+        }};
+        serde_json::json! {{
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": parameters,
+            }
+        }}
+    }
+}
+
+/////////////////////////////////////////////// tests //////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tool_builder() {
+        let tb = ToolBuilder::new(
+            "build_widgets",
+            "Create N different widgets of the specified color",
+        )
+        .arg::<String>("color")
+        .arg::<f64>("count")
+        .build();
+        assert_eq!(
+            r#"{
+  "function": {
+    "description": "Create N different widgets of the specified color",
+    "name": "build_widgets",
+    "parameters": {
+      "properties": {
+        "color": {
+          "type": "string"
+        },
+        "count": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "color",
+        "count"
+      ],
+      "type": "object"
+    }
+  },
+  "type": "function"
+}"#,
+            serde_json::to_string_pretty(&tb).unwrap()
+        );
+    }
+}
