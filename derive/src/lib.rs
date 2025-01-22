@@ -69,6 +69,11 @@ impl StructVisitor for JsonSchemaVisitor {
         for field in fields.named.iter() {
             if let Some(field_ident) = &field.ident {
                 let field_ident = field_ident.to_string();
+                let field_ident = if let Some(field_ident) = field_ident.strip_prefix("r#") {
+                    field_ident.to_string()
+                } else {
+                    field_ident.clone()
+                };
                 let field_type = field.ty.clone();
                 result = quote! {
                     #result

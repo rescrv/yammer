@@ -956,6 +956,12 @@ impl<T: JsonSchema> JsonSchema for Vec<T> {
     }
 }
 
+impl JsonSchema for serde_json::Value {
+    fn json_schema() -> serde_json::Value {
+        serde_json::json! {{}}
+    }
+}
+
 //////////////////////////////////////////// ToolBuilder ///////////////////////////////////////////
 
 /// Build a tool for use in chat completions.
