@@ -876,6 +876,12 @@ pub trait JsonSchema {
     fn json_schema() -> serde_json::Value;
 }
 
+impl JsonSchema for bool {
+    fn json_schema() -> serde_json::Value {
+        serde_json::json! {{ "type": "boolean" }}
+    }
+}
+
 impl JsonSchema for i8 {
     fn json_schema() -> serde_json::Value {
         serde_json::json! {{ "type": "integer" }}
@@ -959,6 +965,12 @@ impl<T: JsonSchema> JsonSchema for Vec<T> {
 impl JsonSchema for serde_json::Value {
     fn json_schema() -> serde_json::Value {
         serde_json::json! {{}}
+    }
+}
+
+impl<Tz: chrono::TimeZone> JsonSchema for chrono::DateTime<Tz> {
+    fn json_schema() -> serde_json::Value {
+        String::json_schema()
     }
 }
 
