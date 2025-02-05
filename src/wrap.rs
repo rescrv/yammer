@@ -1,10 +1,16 @@
 use std::io::Write;
 
+#[derive(Debug)]
+struct IndentRecord {
+    leading_whitespace: usize,
+    indent_by: usize,
+}
+
 /// A word-wrapping struct.
 #[derive(Debug)]
 pub struct WordWrap {
     width: usize,
-    indent: Vec<usize>,
+    indent: Vec<IndentRecord>,
     current_line: String,
 }
 
@@ -49,7 +55,7 @@ impl WordWrap {
             self.current_line.clear();
             tee.write_all("\n".as_bytes())?;
             self.push(
-                " ".repeat(*self.indent.iter().last().unwrap_or(&0))
+                " ".repeat(self.indent.iter().last().map(|x| x.indent_by).unwrap_or(0))
                     .to_string()
                     + tok.trim_start(),
                 tee,
@@ -59,12 +65,27 @@ impl WordWrap {
             if !self.current_line.chars().all(|c| c.is_whitespace()) {
                 let leading_whitespace = self.current_line.chars().count()
                     - self.current_line.trim_start().chars().count();
-                while !self.indent.is_empty() && *self.indent.last().unwrap() >= leading_whitespace
+                while !self.indent.is_empty()
+                    && self.indent.last().unwrap().leading_whitespace >= leading_whitespace
                 {
                     self.indent.pop();
                 }
-                self.indent.push(leading_whitespace);
-                self.current_line = " ".repeat(self.indent.len() * 2 - 2).to_string();
+                let first_char = tok.trim_start().chars().next();
+                let second_char = tok.trim_start().chars().nth(1);
+                let adjust = if first_char == Some('-')
+                    || first_char == Some('+')
+                    || (first_char == Some('*') && second_char != Some('*'))
+                    || (first_char.is_some() && first_char.unwrap().is_numeric())
+                {
+                    2
+                } else {
+                    0
+                };
+                self.indent.push(IndentRecord {
+                    leading_whitespace,
+                    indent_by: 2 * self.indent.len() + adjust,
+                });
+                self.current_line = " ".repeat(self.indent.last().unwrap().indent_by - adjust);
                 self.current_line += tok.trim_start();
                 tee.write_all(self.current_line.as_bytes())?;
                 tee.flush()?;
