@@ -5,7 +5,7 @@ use std::io::{BufRead, Write};
 use std::time::{Instant, SystemTime};
 
 use arrrg::{CommandLine, NoExitCommandLine};
-use rustyline::config::{Configurer, EditMode};
+use rustyline::config::EditMode;
 use rustyline::error::ReadlineError;
 use rustyline::hint::HistoryHinter;
 use rustyline::{Cmd, CompletionType, Config, Editor, EventHandler, KeyEvent};

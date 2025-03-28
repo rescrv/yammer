@@ -1,5 +1,4 @@
 use arrrg::CommandLine;
-use utf8path::Path;
 
 use yammer::{chat_path, Chat, ChatOptions, WordWrap};
 
