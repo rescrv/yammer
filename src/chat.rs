@@ -5,10 +5,10 @@ use std::io::{BufRead, Write};
 use std::time::{Instant, SystemTime};
 
 use arrrg::{CommandLine, NoExitCommandLine};
-use rustyline::config::EditMode;
+use rustyline::config::{Configurer, EditMode};
 use rustyline::error::ReadlineError;
 use rustyline::hint::HistoryHinter;
-use rustyline::{CompletionType, Config, Editor, EventHandler, KeyEvent};
+use rustyline::{Cmd, CompletionType, Config, Editor, EventHandler, KeyEvent};
 use utf8path::Path;
 
 use crate::cli::{CommandHint, ShellHelper, TabEventHandler};
@@ -379,6 +379,7 @@ impl Chat {
             KeyEvent::from('\t'),
             EventHandler::Conditional(Box::new(TabEventHandler)),
         );
+        rl.bind_sequence(KeyEvent::ctrl('l'), EventHandler::Simple(Cmd::ClearScreen));
         loop {
             let line = rl.readline(PROMPT);
             let (args, line) = match line {

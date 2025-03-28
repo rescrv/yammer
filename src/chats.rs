@@ -1,7 +1,7 @@
-use rustyline::config::EditMode;
+use rustyline::config::{Configurer, EditMode};
 use rustyline::error::ReadlineError;
 use rustyline::hint::HistoryHinter;
-use rustyline::{CompletionType, Config, Editor, EventHandler, KeyEvent};
+use rustyline::{Cmd, CompletionType, Config, Editor, EventHandler, KeyEvent};
 use utf8path::Path;
 
 use crate::chat::{Chat, ChatLogLine, ChatOptions, ChatSummary};
@@ -113,6 +113,7 @@ impl Chats {
             KeyEvent::from('\t'),
             EventHandler::Conditional(Box::new(TabEventHandler)),
         );
+        rl.bind_sequence(KeyEvent::ctrl('l'), EventHandler::Simple(Cmd::ClearScreen));
         self.list();
         loop {
             let line = rl.readline(PROMPT);
