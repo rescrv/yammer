@@ -185,7 +185,6 @@ impl Chat {
     /// Create a new chat from a changelog file.  Options will only be used if changelog is None.
     pub fn new(changelog: Option<Path>, options: ChatOptions) -> Result<Self, Error> {
         if let Some(changelog) = changelog.as_ref() {
-            std::fs::create_dir_all(changelog.dirname())?;
             let changelog = changelog.clone().into_owned();
             let messages = vec![];
             // Intentionally override so defaults get default value.

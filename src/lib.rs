@@ -787,14 +787,16 @@ pub fn ollama_host(host: Option<String>) -> String {
 
 ///////////////////////////////////////////// chat_root ////////////////////////////////////////////
 
-fn chat_root() -> Result<Path<'static>, Error> {
+/// The root on the filesystem for chats.
+pub fn chat_root() -> Result<Path<'static>, Error> {
     let root = std::env::var("YAMMER_CHAT").map_err(|_| Error::ChatNotSet)?;
     Ok(Path::from(root))
 }
 
 ///////////////////////////////////////////// chat_path ////////////////////////////////////////////
 
-fn chat_path(chat_id: &str) -> Result<Path<'static>, Error> {
+/// The path for one specific chat.
+pub fn chat_path(chat_id: &str) -> Result<Path<'static>, Error> {
     let root = chat_root()?;
     Ok(root.join("chats").join(format!("{}.ndjson", chat_id)))
 }
