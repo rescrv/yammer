@@ -16,8 +16,8 @@ serde_json = { version = "1.0" }
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.40", features = ["rt", "rt-multi-thread", "macros"] }
 
-arrrg = "0.6"
-arrrg_derive = "0.6"
+arrrg = "0.7"
+arrrg_derive = "0.7"
 minimal_signals = "0.4"
 shvar = "0.5"
 utf8path = "0.6"
