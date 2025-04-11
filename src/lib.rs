@@ -519,7 +519,8 @@ pub struct OneshotOptions {
 
 ////////////////////////////////////////////// editor //////////////////////////////////////////////
 
-fn editor(default: &str) -> Result<impl AsRef<String>, Error> {
+/// Invoke an editor with a default message and return something like a string.
+pub fn editor(default: &str) -> Result<impl AsRef<String>, Error> {
     let path = format!(
         ".yammer.{}.{}",
         std::process::id(),
