@@ -13,11 +13,13 @@ use utf8path::Path;
 mod chat;
 mod chats;
 mod cli;
+mod fmt;
 mod types;
 mod wrap;
 
 pub use chat::{Chat, ChatOptions};
 pub use chats::{Chats, ChatsOptions};
+pub use fmt::Formattable;
 pub use types::{
     ChatMessage, ChatRequest, ChatResponse, EmbedRequest, EmbedResponse, GenerateRequest,
     GenerateResponse,
